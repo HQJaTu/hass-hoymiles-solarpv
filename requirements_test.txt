@@ -5,3 +5,9 @@ pytest
 pytest-asyncio
 pytest-homeassistant-custom-component
 ruff
+black
+isort
+flake8
+flake8-typing-imports
+mypy
+pre-commit

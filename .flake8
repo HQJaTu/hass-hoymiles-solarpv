@@ -1,0 +1,12 @@
+[flake8]
+max-line-length = 100
+# E203 / W503 conflict with black's formatting.
+extend-ignore = E203, W503
+# Home Assistant requires Python 3.13+; tell flake8-typing-imports about it.
+min_python_version = 3.13
+exclude =
+    .git,
+    .venv,
+    __pycache__,
+    build,
+    dist

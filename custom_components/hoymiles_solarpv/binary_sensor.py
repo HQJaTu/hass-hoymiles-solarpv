@@ -19,8 +19,7 @@ async def async_setup_entry(
     """Set up Hoymiles SolarPV binary sensors from a config entry."""
     coordinator = entry.runtime_data
     async_add_entities(
-        HoymilesDtuBinarySensor(coordinator, description)
-        for description in DTU_BINARY_SENSORS
+        HoymilesDtuBinarySensor(coordinator, description) for description in DTU_BINARY_SENSORS
     )
 
 

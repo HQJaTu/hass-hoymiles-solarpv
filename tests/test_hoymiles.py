@@ -101,10 +101,21 @@ def test_get_plant_data_aggregates_linked_inverters():
     """Plant aggregates power/energy only for linked microinverters with alarms flagged."""
     dtu_registers = list(struct.unpack(">3H", b"\xaa\xbb\xcc\xdd\xee\xff"))
 
-    linked = build_record(serial=b"\x00\x00\x00\x00\x00\x01", pv_power=1000, today_production=10,
-                          total_production=100, alarm_code=7, link_status=1)
-    unlinked = build_record(serial=b"\x00\x00\x00\x00\x00\x02", pv_power=9999,
-                            today_production=999, total_production=999, link_status=0)
+    linked = build_record(
+        serial=b"\x00\x00\x00\x00\x00\x01",
+        pv_power=1000,
+        today_production=10,
+        total_production=100,
+        alarm_code=7,
+        link_status=1,
+    )
+    unlinked = build_record(
+        serial=b"\x00\x00\x00\x00\x00\x02",
+        pv_power=9999,
+        today_production=999,
+        total_production=999,
+        link_status=0,
+    )
     null = build_record(serial=b"\x00\x00\x00\x00\x00\x00")
 
     registers_map = {

@@ -2,7 +2,7 @@
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
 
-A custom [Home Assistant](https://www.home-assistant.io/) integration that reads
+This project is a custom [Home Assistant](https://www.home-assistant.io/) integration that reads
 photovoltaic sensor data from a **Hoymiles DTU** (e.g. DTU-Pro) over **Modbus TCP**
 and exposes it as native Home Assistant entities. It can additionally re-publish all
 received records to an **external MQTT broker** using the Home Assistant MQTT
@@ -14,6 +14,11 @@ framing quirk transparently.
 
 ## Features
 
+- 🔌 **Local polling** of a supported Hoymiles DTU — no cloud required.
+- 🏭 Native Home Assitant entities for the **DTU/plant**.
+- 📡 Optional **MQTT support**.
+
+### Technical
 - 🔌 **Local polling** of a Hoymiles DTU over Modbus TCP — no cloud required.
 - 🧭 Native **config flow** — set up entirely from the UI (host, port, unit ID,
   microinverter type).
@@ -29,7 +34,9 @@ framing quirk transparently.
 ## Supported devices
 
 Hoymiles DTU devices that expose the Modbus TCP interface (DTU-Pro and compatible),
-managing **MI** or **HM** series microinverters. All microinverters in one DTU must
+managing **MI** or **HM** series microinverters.
+
+Note: All microinverters in one DTU must
 be of the same family.
 
 ## Installation
@@ -126,8 +133,22 @@ logger:
 
 ```bash
 python -m venv venv && . venv/bin/activate
-pip install homeassistant pymodbus paho-mqtt pytest pytest-homeassistant-custom-component
+pip install -r requirements_test.txt
 pytest
+```
+
+Code quality is enforced with the Home Assistant tool set
+— **black** (formatting)
+- **isort** (imports)
+- **flake8** (linting)
+- **mypy** (typing)
+
+... wired up through
+[pre-commit](https://pre-commit.com/):
+
+```bash
+pre-commit install      # run the checks automatically on every commit
+pre-commit run --all-files
 ```
 
 Validate the manifest/translations with hassfest (the same check CI runs):

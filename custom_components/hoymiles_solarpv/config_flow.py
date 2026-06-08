@@ -44,9 +44,9 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
         vol.Required(CONF_PORT, default=DEFAULT_PORT): vol.All(
             vol.Coerce(int), vol.Range(min=1, max=65535)
         ),
-        vol.Required(
-            CONF_MICROINVERTER_TYPE, default=DEFAULT_MICROINVERTER_TYPE
-        ): vol.In(MICROINVERTER_TYPES),
+        vol.Required(CONF_MICROINVERTER_TYPE, default=DEFAULT_MICROINVERTER_TYPE): vol.In(
+            MICROINVERTER_TYPES
+        ),
         vol.Required(CONF_UNIT_ID, default=DEFAULT_UNIT_ID): vol.All(
             vol.Coerce(int), vol.Range(min=0, max=255)
         ),
@@ -78,9 +78,7 @@ class HoymilesConfigFlow(ConfigFlow, domain=DOMAIN):
 
     VERSION = 1
 
-    async def async_step_user(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Handle the initial step."""
         errors: dict[str, str] = {}
         if user_input is not None:
@@ -104,9 +102,7 @@ class HoymilesConfigFlow(ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="user",
-            data_schema=self.add_suggested_values_to_schema(
-                STEP_USER_DATA_SCHEMA, user_input
-            ),
+            data_schema=self.add_suggested_values_to_schema(STEP_USER_DATA_SCHEMA, user_input),
             errors=errors,
         )
 
@@ -120,16 +116,12 @@ class HoymilesConfigFlow(ConfigFlow, domain=DOMAIN):
 class HoymilesOptionsFlow(OptionsFlow):
     """Handle Hoymiles SolarPV options (polling interval)."""
 
-    async def async_step_init(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Manage the options."""
         if user_input is not None:
             return self.async_create_entry(data=user_input)
 
-        current = self.config_entry.options.get(
-            CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL
-        )
+        current = self.config_entry.options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
         schema = vol.Schema(
             {
                 vol.Required(CONF_SCAN_INTERVAL, default=current): vol.All(

@@ -93,7 +93,9 @@ def _registers_to_bytes(registers: list[int]) -> bytes:
     return struct.pack(f">{len(registers)}H", *registers)
 
 
-def parse_microinverter_record(raw: bytes, microinverter_type: MicroinverterType) -> MicroinverterData:
+def parse_microinverter_record(
+    raw: bytes, microinverter_type: MicroinverterType
+) -> MicroinverterData:
     """Parse a single 40-byte microinverter record.
 
     Arguments:
@@ -240,7 +242,9 @@ class HoymilesModbusTCP:
         try:
             with self._get_client() as client:
                 if not client.connected and not client.connect():
-                    raise HoymilesModbusError(f"Unable to connect to DTU at {self._host}:{self._port}.")
+                    raise HoymilesModbusError(
+                        f"Unable to connect to DTU at {self._host}:{self._port}."
+                    )
                 return self._read_dtu_serial(client)
         except ModbusException as exc:  # pragma: no cover - depends on hardware
             raise HoymilesModbusError(f"Modbus communication failed: {exc}") from exc
@@ -257,7 +261,9 @@ class HoymilesModbusTCP:
         try:
             with self._get_client() as client:
                 if not client.connected and not client.connect():
-                    raise HoymilesModbusError(f"Unable to connect to DTU at {self._host}:{self._port}.")
+                    raise HoymilesModbusError(
+                        f"Unable to connect to DTU at {self._host}:{self._port}."
+                    )
                 dtu_serial = self._read_dtu_serial(client)
                 microinverters = self._read_microinverters(client)
         except ModbusException as exc:  # pragma: no cover - depends on hardware

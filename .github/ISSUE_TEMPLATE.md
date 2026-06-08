@@ -1,6 +1,5 @@
-* Hoymiles MQTT version:
-* Python version:
-* Operating System:
+* Home Assistant version:
+* HASS Hoymiles SolarPV version:
 
 ### Description
 

@@ -17,6 +17,7 @@ from decimal import Decimal
 from typing import TYPE_CHECKING
 
 import paho.mqtt.client as mqtt
+from homeassistant.helpers.entity import EntityDescription
 
 from .const import MANUFACTURER
 from .descriptions import DTU_BINARY_SENSORS, DTU_SENSORS, MICROINVERTER_SENSORS
@@ -88,22 +89,18 @@ class HoymilesMqttPublisher:
         messages: list[tuple[str, str]] = []
         dtu_serial = plant_data.dtu
 
-        for description in DTU_SENSORS:
+        for sensor in DTU_SENSORS:
+            messages.append(self._build_discovery("sensor", "DTU", dtu_serial, dtu_serial, sensor))
+        for binary_sensor in DTU_BINARY_SENSORS:
             messages.append(
-                self._build_discovery("sensor", "DTU", dtu_serial, dtu_serial, description)
-            )
-        for description in DTU_BINARY_SENSORS:
-            messages.append(
-                self._build_discovery(
-                    "binary_sensor", "DTU", dtu_serial, dtu_serial, description
-                )
+                self._build_discovery("binary_sensor", "DTU", dtu_serial, dtu_serial, binary_sensor)
             )
         for microinverter in plant_data.microinverter_data:
             serial = microinverter.serial_number
-            for description in MICROINVERTER_SENSORS:
+            for sensor in MICROINVERTER_SENSORS:
                 messages.append(
                     self._build_discovery(
-                        "sensor", f"Inverter {serial}", serial, dtu_serial, description
+                        "sensor", f"Inverter {serial}", serial, dtu_serial, sensor
                     )
                 )
         return messages
@@ -114,7 +111,7 @@ class HoymilesMqttPublisher:
         device_name: str,
         device_serial: str,
         dtu_serial: str,
-        description,
+        description: EntityDescription,
     ) -> tuple[str, str]:
         state_topic = self._state_topic(device_serial)
         key = description.key

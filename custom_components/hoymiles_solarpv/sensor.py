@@ -44,9 +44,7 @@ async def async_setup_entry(
         if new_entities:
             async_add_entities(new_entities)
 
-    async_add_entities(
-        HoymilesDtuSensor(coordinator, description) for description in DTU_SENSORS
-    )
+    async_add_entities(HoymilesDtuSensor(coordinator, description) for description in DTU_SENSORS)
     _add_microinverter_entities()
     entry.async_on_unload(coordinator.async_add_listener(_add_microinverter_entities))
 

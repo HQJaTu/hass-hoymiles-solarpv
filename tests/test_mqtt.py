@@ -9,7 +9,10 @@ from custom_components.hoymiles_solarpv.mqtt import HoymilesMqttPublisher
 
 def _make_publisher() -> HoymilesMqttPublisher:
     return HoymilesMqttPublisher(
-        host="broker", port=1883, username=None, password=None,
+        host="broker",
+        port=1883,
+        username=None,
+        password=None,
         topic_base="homeassistant/hoymiles_solarpv",
     )
 
