@@ -1,12 +1,17 @@
 {
-  "domain": "hoymiles_solarpv",
-  "name": "Hoymiles SolarPV",
-  "codeowners": ["@hoymiles-solarpv"],
-  "config_flow": true,
-  "documentation": "https://github.com/hoymiles-solarpv/hoymiles-solarpv-hacs",
-  "integration_type": "hub",
-  "iot_class": "local_polling",
-  "issue_tracker": "https://github.com/hoymiles-solarpv/hoymiles-solarpv-hacs/issues",
-  "requirements": ["pymodbus>=3.5.0", "paho-mqtt>=1.6.1"],
-  "version": "1.0.0"
+    "domain": "hoymiles_solarpv",
+    "name": "Hoymiles SolarPV",
+    "codeowners": [
+        "@HQJaTu"
+    ],
+    "config_flow": true,
+    "documentation": "https://github.com/HQJaTu/hass-hoymiles-solarpv",
+    "integration_type": "hub",
+    "iot_class": "local_polling",
+    "issue_tracker": "https://github.com/HQJaTu/hass-hoymiles-solarpv/issues",
+    "requirements": [
+        "pymodbus>=3.5.0",
+        "paho-mqtt>=1.6.1"
+    ],
+    "version": "1.0.0"
 }
