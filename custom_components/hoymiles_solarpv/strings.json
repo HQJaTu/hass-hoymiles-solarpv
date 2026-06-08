@@ -1,0 +1,65 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to Hoymiles DTU",
+        "description": "Enter the address of your Hoymiles DTU (Modbus TCP). Optionally re-publish all received data to an external MQTT broker.",
+        "data": {
+          "host": "DTU host",
+          "port": "DTU Modbus port",
+          "microinverter_type": "Microinverter type",
+          "unit_id": "Modbus unit ID",
+          "mqtt_enabled": "Re-publish data to an external MQTT broker",
+          "mqtt_host": "MQTT broker host",
+          "mqtt_port": "MQTT broker port",
+          "mqtt_username": "MQTT username",
+          "mqtt_password": "MQTT password",
+          "mqtt_topic": "MQTT base topic"
+        },
+        "data_description": {
+          "host": "IP address or hostname of the DTU.",
+          "microinverter_type": "MI or HM series. All microinverters must be the same type.",
+          "unit_id": "Modbus unit/device ID of the DTU (usually 1).",
+          "mqtt_topic": "Base topic that all published state messages are nested under."
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to the DTU. Check the host, port and that the DTU is reachable.",
+      "mqtt_host_required": "An MQTT broker host is required when MQTT re-publishing is enabled.",
+      "unknown": "An unexpected error occurred."
+    },
+    "abort": {
+      "already_configured": "This DTU is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Hoymiles SolarPV options",
+        "data": {
+          "scan_interval": "Polling interval (seconds)"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "pv_power": { "name": "PV power" },
+      "today_production": { "name": "Today's production" },
+      "total_production": { "name": "Total production" },
+      "pv_voltage": { "name": "PV voltage" },
+      "pv_current": { "name": "PV current" },
+      "grid_voltage": { "name": "Grid voltage" },
+      "grid_frequency": { "name": "Grid frequency" },
+      "temperature": { "name": "Temperature" },
+      "operating_status": { "name": "Operating status" },
+      "alarm_code": { "name": "Alarm code" },
+      "alarm_count": { "name": "Alarm count" },
+      "link_status": { "name": "Link status" }
+    },
+    "binary_sensor": {
+      "alarm_flag": { "name": "Alarm" }
+    }
+  }
+}

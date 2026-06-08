@@ -1,0 +1,7 @@
+homeassistant==2026.6.1
+pymodbus>=3.5.0
+paho-mqtt>=1.6.1
+pytest
+pytest-asyncio
+pytest-homeassistant-custom-component
+ruff
