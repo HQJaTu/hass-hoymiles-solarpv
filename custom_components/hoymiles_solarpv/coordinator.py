@@ -9,6 +9,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_PORT
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.util import dt as dt_util
 
 from .const import (
     CONF_MICROINVERTER_TYPE,
@@ -22,6 +23,7 @@ from .const import (
 )
 from .hoymiles import HoymilesModbusError, HoymilesModbusTCP, MicroinverterType, PlantData
 from .mqtt import HoymilesMqttPublisher
+from .production import ProductionCache
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -58,6 +60,7 @@ class HoymilesDataUpdateCoordinator(DataUpdateCoordinator[PlantData]):
         )
         self._mqtt_publisher = mqtt_publisher
         self._mqtt_enabled = config_entry.data.get(CONF_MQTT_ENABLED, False)
+        self._production_cache = ProductionCache()
 
     @property
     def client(self) -> HoymilesModbusTCP:
@@ -70,6 +73,10 @@ class HoymilesDataUpdateCoordinator(DataUpdateCoordinator[PlantData]):
             plant_data = await self.hass.async_add_executor_job(self._client.get_plant_data)
         except HoymilesModbusError as err:
             raise UpdateFailed(f"Error communicating with Hoymiles DTU: {err}") from err
+
+        # Smooth DTU production glitches and handle the ~22:00 daily reset before
+        # the data reaches any entity or the MQTT publisher.
+        self._production_cache.process(plant_data, dt_util.now())
 
         if self._mqtt_enabled and self._mqtt_publisher is not None:
             # MQTT publishing must never break data collection; log and continue.
