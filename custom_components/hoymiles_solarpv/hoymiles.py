@@ -1,4 +1,5 @@
-"""Self-contained Hoymiles DTU Modbus TCP client.
+"""
+Self-contained Hoymiles DTU Modbus TCP client.
 
 This module bundles the low level protocol handling that is specific to
 Hoymiles DTU devices (DTU-Pro and similar).  It deliberately avoids any

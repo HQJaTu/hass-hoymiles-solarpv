@@ -1,4 +1,5 @@
-"""Optional re-publishing of DTU data to an external MQTT broker.
+"""
+Optional re-publishing of DTU data to an external MQTT broker.
 
 This is completely independent from Home Assistant's own MQTT integration.
 It targets a user supplied broker (host/port/username/password) and publishes

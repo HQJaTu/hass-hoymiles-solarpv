@@ -1,4 +1,6 @@
-"""Config flow for the Hoymiles SolarPV integration."""
+"""
+Config flow for the Hoymiles SolarPV integration.
+"""
 
 from __future__ import annotations
 
@@ -63,23 +65,35 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
 
 
 async def _validate_connection(hass, data: dict[str, Any]) -> str:
-    """Validate the DTU connection and return its serial number."""
+    """
+    Validate the DTU connection and return its serial number.
+    :param hass: Home Assistant core.
+    :param data: A data object that contains information about the connection.
+    :return: The serial number.
+    """
     client = HoymilesModbusTCP(
         host=data[CONF_HOST],
         port=data[CONF_PORT],
         microinverter_type=MicroinverterType(data[CONF_MICROINVERTER_TYPE]),
         unit_id=data[CONF_UNIT_ID],
     )
+
     return await hass.async_add_executor_job(client.get_dtu_serial)
 
 
 class HoymilesConfigFlow(ConfigFlow, domain=DOMAIN):
-    """Handle a config flow for Hoymiles SolarPV."""
+    """
+    Handle a config flow for Hoymiles SolarPV.
+    """
 
     VERSION = 1
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
-        """Handle the initial step."""
+        """
+        Handle the initial step.
+        :param user_input: A user input data that contains a dictionary that represents
+        :return ConfigFlowResult
+        """
         errors: dict[str, str] = {}
         if user_input is not None:
             if user_input.get(CONF_MQTT_ENABLED) and not user_input.get(CONF_MQTT_HOST):
@@ -114,10 +128,16 @@ class HoymilesConfigFlow(ConfigFlow, domain=DOMAIN):
 
 
 class HoymilesOptionsFlow(OptionsFlow):
-    """Handle Hoymiles SolarPV options (polling interval)."""
+    """
+    Handle Hoymiles SolarPV options (polling interval).
+    """
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
-        """Manage the options."""
+        """
+        Manage the options.
+        :param user_input: A user input data that contains a dictionary that represents
+        :return ConfigFlowResult
+        """
         if user_input is not None:
             return self.async_create_entry(data=user_input)
 
@@ -129,4 +149,5 @@ class HoymilesOptionsFlow(OptionsFlow):
                 ),
             }
         )
+
         return self.async_show_form(step_id="init", data_schema=schema)

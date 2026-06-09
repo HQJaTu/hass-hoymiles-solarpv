@@ -1,4 +1,6 @@
-"""Constants for the Hoymiles SolarPV integration."""
+"""
+Constants for the Hoymiles SolarPV integration.
+"""
 
 from __future__ import annotations
 

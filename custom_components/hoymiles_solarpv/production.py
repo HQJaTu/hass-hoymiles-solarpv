@@ -1,4 +1,5 @@
-"""Production smoothing and daily-reset handling for Hoymiles DTU data.
+"""
+Production smoothing and daily-reset handling for Hoymiles DTU data.
 
 Hoymiles DTUs have two quirks that this module compensates for:
 

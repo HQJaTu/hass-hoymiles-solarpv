@@ -1,4 +1,6 @@
-"""Base entities for the Hoymiles SolarPV integration."""
+"""
+Base entities for the Hoymiles SolarPV integration.
+"""
 
 from __future__ import annotations
 

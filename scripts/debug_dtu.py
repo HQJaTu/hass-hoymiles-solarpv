@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Run and debug the Hoymiles SolarPV integration logic outside Home Assistant.
+
+# vim: autoindent tabstop=4 shiftwidth=4 expandtab softtabstop=4 filetype=python
+
+"""
+Run and debug the Hoymiles SolarPV integration logic outside Home Assistant.
 
 This talks to a real DTU using the integration's own Modbus client and prints the
 decoded plant data, so you can verify connectivity and step through the parsing
@@ -43,6 +47,7 @@ from pathlib import Path
 
 _PKG = "hoymiles_solarpv_local"
 _INTEGRATION_DIR = Path(__file__).resolve().parent.parent / "custom_components" / "hoymiles_solarpv"
+_SAMPLE_RECORD = struct.Struct(">B6sBHHHHHHIhHHHB7s")
 
 _LOGGER = logging.getLogger("hoymiles_debug")
 
@@ -65,12 +70,13 @@ def _load(module: str) -> types.ModuleType:
     loaded = importlib.util.module_from_spec(spec)
     sys.modules[full_name] = loaded
     spec.loader.exec_module(loaded)
+
     return loaded
 
 
 def _print_plant(plant) -> None:
     """
-    pretty printing
+    Helper: Pretty print plant information
     :param plant:
     """
     print(f"\nDTU {plant.dtu}")
@@ -98,10 +104,12 @@ def _print_plant(plant) -> None:
         )
 
 
-# --- live polling ----------------------------------------------------------
-
-
 def _run_live(args: argparse.Namespace) -> int:
+    """
+    Run a live polling session
+    :param args: parsed arguments
+    :return: exit code
+    """
     hoymiles = _load("hoymiles")
     client = hoymiles.HoymilesModbusTCP(
         host=args.host,
@@ -141,10 +149,16 @@ def _run_live(args: argparse.Namespace) -> int:
     finally:
         if publisher is not None:
             publisher.close()
+
     return 0
 
 
 def _build_publisher(args: argparse.Namespace):
+    """
+    Build MQTT publisher
+    :param args: parsed arguments
+    :return: object of HoymilesMqttPublisher
+    """
     if not args.mqtt_host:
         return None
     try:
@@ -156,6 +170,7 @@ def _build_publisher(args: argparse.Namespace):
             err,
         )
         raise SystemExit(2) from err
+
     return mqtt.HoymilesMqttPublisher(
         host=args.mqtt_host,
         port=args.mqtt_port,
@@ -165,13 +180,15 @@ def _build_publisher(args: argparse.Namespace):
     )
 
 
-# --- offline self-test (no DTU) --------------------------------------------
-
-_RECORD = struct.Struct(">B6sBHHHHHHIhHHHB7s")
-
-
 def _fake_record(today: int, total: int, status: int = 3) -> bytes:
-    return _RECORD.pack(
+    """
+    offline self-test (no DTU)
+    :param today:
+    :param total:
+    :param status:
+    :return:
+    """
+    return _SAMPLE_RECORD.pack(
         1,
         b"\x11\x22\x33\x44\x55\x66",
         1,
@@ -192,6 +209,10 @@ def _fake_record(today: int, total: int, status: int = 3) -> bytes:
 
 
 def _run_selftest() -> int:
+    """
+    self-test
+    :return:
+    """
     hoymiles = _load("hoymiles")
     production = _load("production")
 
@@ -231,10 +252,12 @@ def _run_selftest() -> int:
     return 0
 
 
-# --- entry point -----------------------------------------------------------
-
-
 def _parse_args(argv: list[str]) -> argparse.Namespace:
+    """
+    Argument parser
+    :param argv: list of CLI arguments to parse
+    :return: parsed arguments in namespace
+    """
     parser = argparse.ArgumentParser(description="Debug the Hoymiles SolarPV integration locally.")
     parser.add_argument("--host", help="DTU host / IP address")
     parser.add_argument("--port", type=int, default=502, help="DTU Modbus TCP port")
@@ -255,7 +278,11 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
 
 
 def main(argv: list[str]) -> int:
-    """Console entry point."""
+    """
+    Console entry point
+    :param argv: list of CLI arguments to parse
+    :return: exit code
+    """
     args = _parse_args(argv)
     logging.basicConfig(
         level=logging.DEBUG if args.debug else logging.INFO,
@@ -269,6 +296,7 @@ def main(argv: list[str]) -> int:
     if not args.host:
         _LOGGER.error("Provide --host (or use --selftest for an offline check).")
         return 2
+
     return _run_live(args)
 
 

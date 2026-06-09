@@ -1,4 +1,6 @@
-"""DataUpdateCoordinator for the Hoymiles SolarPV integration."""
+"""
+DataUpdateCoordinator for the Hoymiles SolarPV integration.
+"""
 
 from __future__ import annotations
 

@@ -1,4 +1,6 @@
-"""Entity descriptions shared by the sensor platform and the MQTT publisher."""
+"""
+Entity descriptions shared by the sensor platform and the MQTT publisher.
+"""
 
 from __future__ import annotations
 

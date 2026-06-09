@@ -1,4 +1,6 @@
-"""Binary sensor platform for the Hoymiles SolarPV integration."""
+"""
+Binary sensor platform for the Hoymiles SolarPV integration.
+"""
 
 from __future__ import annotations
 
@@ -24,7 +26,9 @@ async def async_setup_entry(
 
 
 class HoymilesDtuBinarySensor(HoymilesDtuEntity, BinarySensorEntity):
-    """Binary sensor reporting a DTU/plant boolean value."""
+    """
+    Binary sensor reporting a DTU/plant boolean value.
+    """
 
     @property
     def is_on(self) -> bool:
