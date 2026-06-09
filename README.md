@@ -140,32 +140,7 @@ logger:
   it becomes available again on the next successful poll.
 
 ## Development
-
-```bash
-python -m venv venv && . venv/bin/activate
-pip install -r requirements_test.txt
-pytest
-```
-
-Code quality is enforced with the Home Assistant tool set
-— **black** (formatting)
-- **isort** (imports)
-- **flake8** (linting)
-- **mypy** (typing)
-
-... wired up through
-[pre-commit](https://pre-commit.com/):
-
-```bash
-pre-commit install      # run the checks automatically on every commit
-pre-commit run --all-files
-```
-
-Validate the manifest/translations with hassfest (the same check CI runs):
-
-```bash
-python -m script.hassfest --integration-path custom_components/hoymiles_solarpv
-```
+See [DEVELOPMENT.md](DEVELOPMENT.md) for details.
 
 ## Credits
 
