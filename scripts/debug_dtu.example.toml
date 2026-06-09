@@ -1,0 +1,24 @@
+# Example configuration for scripts/debug_dtu.py
+#
+#   python scripts/debug_dtu.py --config scripts/debug_dtu.example.toml
+#
+# All settings live under the [debug_dtu] table. Keys are the long option names
+# (dashes kept). Anything passed on the command line overrides the file.
+
+[debug_dtu]
+host = "192.168.1.50"
+port = 502
+type = "MI"          # "MI" or "HM"
+unit-id = 1
+timeout = 3.0
+retries = 3
+interval = 30        # poll every N seconds; 0 = read once and exit
+cache = true         # apply production smoothing / daily-reset handling
+debug = false        # enable pymodbus DEBUG logging
+
+# Optional MQTT re-publishing (needs homeassistant importable):
+# mqtt-host = "192.168.1.10"
+# mqtt-port = 1883
+# mqtt-username = "user"
+# mqtt-password = "secret"
+# mqtt-topic = "homeassistant/hoymiles_solarpv"

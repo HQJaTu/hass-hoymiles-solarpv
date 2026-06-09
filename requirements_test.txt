@@ -4,6 +4,8 @@ homeassistant==2026.6.1
 pytest-homeassistant-custom-component==0.13.337
 pymodbus>=3.5.0
 paho-mqtt>=1.6.1
+# Used by scripts/debug_dtu.py for CLI + TOML config-file parsing.
+ConfigArgParse>=1.7
 pytest
 pytest-asyncio
 ruff

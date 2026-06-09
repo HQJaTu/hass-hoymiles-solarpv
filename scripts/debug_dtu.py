@@ -17,6 +17,9 @@ The core path needs only ``pymodbus`` installed. Optional features pull in more:
   * ``--selftest`` runs entirely offline (no DTU): it parses a synthetic record and
     simulates a day of polling through the production cache, incl. the 22:00 reset.
 
+Options may also be read from a TOML config file via ``--config`` (CLI flags take
+precedence). See ``scripts/debug_dtu.example.toml`` for the format.
+
 Examples
 --------
   # Read a DTU once and print everything
@@ -25,13 +28,15 @@ Examples
   # Poll every 30s, applying production smoothing, with pymodbus debug logging
   python scripts/debug_dtu.py --host 192.168.1.50 --interval 30 --cache --debug
 
+  # Read all settings from a config file
+  python scripts/debug_dtu.py --config scripts/debug_dtu.example.toml
+
   # Offline logic check, no hardware needed
   python scripts/debug_dtu.py --selftest
 """
 
 from __future__ import annotations
 
-import argparse
 import importlib.util
 import logging
 import struct
@@ -40,6 +45,8 @@ import time
 import types
 from datetime import datetime
 from pathlib import Path
+
+import configargparse
 
 # --- load integration modules without triggering the package __init__ (which
 # would import Home Assistant). A synthetic package with __path__ lets the
@@ -104,7 +111,7 @@ def _print_plant(plant) -> None:
         )
 
 
-def _run_live(args: argparse.Namespace) -> int:
+def _run_live(args: configargparse.Namespace) -> int:
     """
     Run a live polling session
     :param args: parsed arguments
@@ -153,7 +160,7 @@ def _run_live(args: argparse.Namespace) -> int:
     return 0
 
 
-def _build_publisher(args: argparse.Namespace):
+def _build_publisher(args: configargparse.Namespace):
     """
     Build MQTT publisher
     :param args: parsed arguments
@@ -252,13 +259,22 @@ def _run_selftest() -> int:
     return 0
 
 
-def _parse_args(argv: list[str]) -> argparse.Namespace:
+def _parse_args(argv: list[str]) -> configargparse.Namespace:
     """
     Argument parser
+
+    Values may also be supplied through a TOML config file (``--config``) under a
+    ``[debug_dtu]`` table, using the long option name as the key (dashes kept,
+    e.g. ``unit-id``). Precedence is: command line > config file > defaults.
+
     :param argv: list of CLI arguments to parse
     :return: parsed arguments in namespace
     """
-    parser = argparse.ArgumentParser(description="Debug the Hoymiles SolarPV integration locally.")
+    parser = configargparse.ArgParser(
+        description="Debug the Hoymiles SolarPV integration locally.",
+        config_file_parser_class=configargparse.TomlConfigParser(["debug_dtu"]),
+    )
+    parser.add_argument("-c", "--config", is_config_file=True, help="Path to a TOML config file")
     parser.add_argument("--host", help="DTU host / IP address")
     parser.add_argument("--port", type=int, default=502, help="DTU Modbus TCP port")
     parser.add_argument("--type", choices=["MI", "HM"], default="MI", help="Microinverter family")

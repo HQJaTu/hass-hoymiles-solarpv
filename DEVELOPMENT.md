@@ -58,7 +58,7 @@ debugger. The core path needs only `pymodbus`; `--mqtt-*` additionally needs
 
 ### Usage
 ```text
-usage: debug_dtu.py [-h] [--host HOST] [--port PORT] [--type {MI,HM}]
+usage: debug_dtu.py [-h] [-c CONFIG] [--host HOST] [--port PORT] [--type {MI,HM}]
                     [--unit-id UNIT_ID] [--timeout TIMEOUT] [--retries RETRIES]
                     [--interval INTERVAL] [--cache] [--mqtt-host MQTT_HOST]
                     [--mqtt-port MQTT_PORT] [--mqtt-username MQTT_USERNAME]
@@ -69,6 +69,7 @@ Debug the Hoymiles SolarPV integration locally.
 
 options:
   -h, --help            show this help message and exit
+  -c, --config CONFIG   Path to a TOML config file
   --host HOST           DTU host / IP address
   --port PORT           DTU Modbus TCP port
   --type {MI,HM}        Microinverter family
@@ -85,8 +86,15 @@ options:
   --mqtt-topic MQTT_TOPIC
   --debug               Enable pymodbus DEBUG logging
   --selftest            Run offline logic check (no DTU)
+
+Args that start with '--' can also be set in a config file (specified via -c). Config
+file syntax is Tom's Obvious, Minimal Language. See https://toml.io/en/ for details. In general, command-line values override
+config file values which override defaults.
 ```
 
+Any option can be supplied through a TOML config file under a `[debug_dtu]`
+table (long option name as the key, dashes kept). See
+[`scripts/debug_dtu.example.toml`](scripts/debug_dtu.example.toml).
 
 ### Examples
 
@@ -100,4 +108,7 @@ python scripts/debug_dtu.py --host 192.168.1.50
 
 # Poll every 30s with production smoothing and full pymodbus DEBUG logging
 python scripts/debug_dtu.py --host 192.168.1.50 --interval 30 --cache --debug
+
+# Read all settings from a TOML config file (CLI flags still override it)
+python scripts/debug_dtu.py --config scripts/debug_dtu.example.toml
 ```
