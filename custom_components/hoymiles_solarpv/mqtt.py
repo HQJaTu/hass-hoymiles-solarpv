@@ -14,10 +14,12 @@ from __future__ import annotations
 
 import json
 import logging
+from datetime import datetime, timezone
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
 import paho.mqtt.client as mqtt
+from homeassistant.components.sensor import SensorDeviceClass, SensorEntityDescription
 from homeassistant.helpers.entity import EntityDescription
 
 from .const import MANUFACTURER
@@ -29,6 +31,15 @@ if TYPE_CHECKING:
 _LOGGER = logging.getLogger(__name__)
 
 _DISCOVERY_PREFIX = "homeassistant"
+
+# Synthetic DTU sensor carrying the time the data was published. It is handled
+# only here (not a real plant attribute), so Home Assistant consumers can show
+# how old the data is. ``timestamp`` device class renders as relative time.
+_LAST_UPDATE_KEY = "last_update"
+_LAST_UPDATE_SENSOR = SensorEntityDescription(
+    key=_LAST_UPDATE_KEY,
+    device_class=SensorDeviceClass.TIMESTAMP,
+)
 
 
 def _json_default(value: object) -> object:
@@ -92,6 +103,9 @@ class HoymilesMqttPublisher:
 
         for sensor in DTU_SENSORS:
             messages.append(self._build_discovery("sensor", "DTU", dtu_serial, dtu_serial, sensor))
+        messages.append(
+            self._build_discovery("sensor", "DTU", dtu_serial, dtu_serial, _LAST_UPDATE_SENSOR)
+        )
         for binary_sensor in DTU_BINARY_SENSORS:
             messages.append(
                 self._build_discovery("binary_sensor", "DTU", dtu_serial, dtu_serial, binary_sensor)
@@ -143,13 +157,15 @@ class HoymilesMqttPublisher:
         topic = self._config_topic(platform, device_serial, key)
         return topic, json.dumps(payload)
 
-    def _state_payloads(self, plant_data: PlantData) -> list[tuple[str, str]]:
+    def _state_payloads(self, plant_data: PlantData, timestamp: datetime) -> list[tuple[str, str]]:
         messages: list[tuple[str, str]] = []
         dtu_values: dict[str, object] = {
             description.key: getattr(plant_data, description.key) for description in DTU_SENSORS
         }
         for description in DTU_BINARY_SENSORS:
             dtu_values[description.key] = "ON" if getattr(plant_data, description.key) else "OFF"
+        # ISO 8601 timestamp so HA can render the data age as relative time.
+        dtu_values[_LAST_UPDATE_KEY] = timestamp.isoformat()
         messages.append(
             (self._state_topic(plant_data.dtu), json.dumps(dtu_values, default=_json_default))
         )
@@ -175,12 +191,20 @@ class HoymilesMqttPublisher:
 
     # -- public API ---------------------------------------------------------
 
-    def publish_plant_data(self, plant_data: PlantData) -> None:
+    def publish_plant_data(self, plant_data: PlantData, timestamp: datetime | None = None) -> None:
         """Publish discovery (once) and state messages for the given plant data.
+
+        Arguments:
+            plant_data: the data to publish.
+            timestamp: time the data was read; defaults to ``now`` (UTC). Published
+                as a ``last_update`` timestamp sensor so consumers can show data age.
 
         Raises whatever the underlying MQTT client raises on connection errors;
         the coordinator is responsible for logging and continuing.
         """
+        if timestamp is None:
+            timestamp = datetime.now(timezone.utc)
+
         self._ensure_connected()
 
         if not self._configured:
@@ -189,6 +213,6 @@ class HoymilesMqttPublisher:
             self._configured = True
             _LOGGER.debug("Published MQTT discovery config for DTU %s", plant_data.dtu)
 
-        for topic, payload in self._state_payloads(plant_data):
+        for topic, payload in self._state_payloads(plant_data, timestamp):
             self._client.publish(topic, payload)
         _LOGGER.debug("Published MQTT state for DTU %s", plant_data.dtu)

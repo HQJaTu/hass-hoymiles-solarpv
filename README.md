@@ -123,6 +123,11 @@ This lets a second Home Assistant instance (or any MQTT consumer) auto-discover 
 same entities. MQTT publishing is *best effort*: failures are logged and never
 interrupt data collection in this instance.
 
+The DTU state message also carries a `last_update` field — an ISO 8601 timestamp of
+when the data was published — exposed as a `timestamp` sensor on the DTU device.
+Home Assistant renders it as relative time ("3 minutes ago"), so dashboards can show
+how fresh the data is.
+
 ## Troubleshooting
 
 Enable debug logging by adding to `configuration.yaml`:
