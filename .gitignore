@@ -1,3 +1,6 @@
+# Configuration files
+*.toml
+
 # macOS
 .DS_Store
 .AppleDouble
