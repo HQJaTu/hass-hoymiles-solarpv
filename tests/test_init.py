@@ -50,9 +50,15 @@ async def test_setup_creates_entities(hass: HomeAssistant, sample_plant_data) ->
     assert alarm is not None
     assert alarm.state == "off"
 
-    mi_voltage = hass.states.get("sensor.hoymiles_microinverter_112233445566_pv_voltage")
-    assert mi_voltage is not None
-    assert float(mi_voltage.state) == 245.0
+    # Inverter-level sensor (per serial).
+    mi_temp = hass.states.get("sensor.hoymiles_microinverter_112233445566_temperature")
+    assert mi_temp is not None
+    assert float(mi_temp.state) == 35.5
+
+    # Port-level sensor (per serial + port), name carries the port number.
+    port_voltage = hass.states.get("sensor.hoymiles_microinverter_112233445566_port_1_pv_voltage")
+    assert port_voltage is not None
+    assert float(port_voltage.state) == 245.0
 
 
 async def test_unload_entry(hass: HomeAssistant, sample_plant_data) -> None:

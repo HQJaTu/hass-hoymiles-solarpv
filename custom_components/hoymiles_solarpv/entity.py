@@ -75,3 +75,54 @@ class HoymilesMicroinverterEntity(CoordinatorEntity[HoymilesDataUpdateCoordinato
     def available(self) -> bool:
         """Return True if the coordinator succeeded and the inverter is present."""
         return super().available and self.microinverter is not None
+
+
+class HoymilesPortEntity(CoordinatorEntity[HoymilesDataUpdateCoordinator]):
+    """Base class for entities that represent a single PV port of a microinverter.
+
+    A microinverter can have several ports (PV inputs) sharing one serial; each
+    port is reported as its own record. Port entities attach to the same device
+    as their microinverter and carry the port number in their name/id.
+    """
+
+    _attr_has_entity_name = True
+
+    def __init__(
+        self,
+        coordinator: HoymilesDataUpdateCoordinator,
+        description: EntityDescription,
+        serial_number: str,
+        port_number: int,
+    ) -> None:
+        """Initialize the port entity."""
+        super().__init__(coordinator)
+        self.entity_description = description
+        self._serial_number = serial_number
+        self._port_number = port_number
+        dtu_serial = coordinator.data.dtu
+        self._attr_unique_id = f"{serial_number}_{port_number}_{description.key}"
+        self._attr_translation_placeholders = {"port": str(port_number)}
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, serial_number)},
+            name=f"Hoymiles Microinverter {serial_number}",
+            manufacturer=MANUFACTURER,
+            model="Microinverter",
+            serial_number=serial_number,
+            via_device=(DOMAIN, dtu_serial),
+        )
+
+    @property
+    def port(self) -> MicroinverterData | None:
+        """Return the matching port record from the latest poll, if present."""
+        for microinverter in self.coordinator.data.microinverter_data:
+            if (
+                microinverter.serial_number == self._serial_number
+                and microinverter.port_number == self._port_number
+            ):
+                return microinverter
+        return None
+
+    @property
+    def available(self) -> bool:
+        """Return True if the coordinator succeeded and the port is present."""
+        return super().available and self.port is not None

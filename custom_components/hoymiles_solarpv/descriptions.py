@@ -57,30 +57,14 @@ DTU_BINARY_SENSORS: tuple[BinarySensorEntityDescription, ...] = (
     ),
 )
 
-# --- Microinverter ----------------------------------------------------------
+# --- Microinverter (inverter-level: one set per microinverter serial) -------
+#
+# A Hoymiles microinverter can drive several PV inputs ("ports"); the DTU emits
+# one record per port, all sharing the microinverter serial. These fields are
+# inverter-wide (identical across that inverter's ports), so they are published
+# once per serial. The per-port fields live in PORT_SENSORS below.
 
 MICROINVERTER_SENSORS: tuple[SensorEntityDescription, ...] = (
-    SensorEntityDescription(
-        key="pv_voltage",
-        translation_key="pv_voltage",
-        device_class=SensorDeviceClass.VOLTAGE,
-        native_unit_of_measurement=UnitOfElectricPotential.VOLT,
-        state_class=SensorStateClass.MEASUREMENT,
-    ),
-    SensorEntityDescription(
-        key="pv_current",
-        translation_key="pv_current",
-        device_class=SensorDeviceClass.CURRENT,
-        native_unit_of_measurement=UnitOfElectricCurrent.AMPERE,
-        state_class=SensorStateClass.MEASUREMENT,
-    ),
-    SensorEntityDescription(
-        key="pv_power",
-        translation_key="pv_power",
-        device_class=SensorDeviceClass.POWER,
-        native_unit_of_measurement=UnitOfPower.WATT,
-        state_class=SensorStateClass.MEASUREMENT,
-    ),
     SensorEntityDescription(
         key="grid_voltage",
         translation_key="grid_voltage",
@@ -103,20 +87,6 @@ MICROINVERTER_SENSORS: tuple[SensorEntityDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
     ),
     SensorEntityDescription(
-        key="today_production",
-        translation_key="today_production",
-        device_class=SensorDeviceClass.ENERGY,
-        native_unit_of_measurement=UnitOfEnergy.WATT_HOUR,
-        state_class=SensorStateClass.TOTAL_INCREASING,
-    ),
-    SensorEntityDescription(
-        key="total_production",
-        translation_key="total_production",
-        device_class=SensorDeviceClass.ENERGY,
-        native_unit_of_measurement=UnitOfEnergy.WATT_HOUR,
-        state_class=SensorStateClass.TOTAL_INCREASING,
-    ),
-    SensorEntityDescription(
         key="operating_status",
         translation_key="operating_status",
         entity_category=EntityCategory.DIAGNOSTIC,
@@ -135,5 +105,48 @@ MICROINVERTER_SENSORS: tuple[SensorEntityDescription, ...] = (
         key="link_status",
         translation_key="link_status",
         entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+)
+
+# --- Port (one set per microinverter port) ----------------------------------
+#
+# These are the per-PV-input measurements. There is one record (hence one set
+# of these sensors) per (serial, port_number).
+
+PORT_SENSORS: tuple[SensorEntityDescription, ...] = (
+    SensorEntityDescription(
+        key="pv_voltage",
+        translation_key="port_pv_voltage",
+        device_class=SensorDeviceClass.VOLTAGE,
+        native_unit_of_measurement=UnitOfElectricPotential.VOLT,
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+    SensorEntityDescription(
+        key="pv_current",
+        translation_key="port_pv_current",
+        device_class=SensorDeviceClass.CURRENT,
+        native_unit_of_measurement=UnitOfElectricCurrent.AMPERE,
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+    SensorEntityDescription(
+        key="pv_power",
+        translation_key="port_pv_power",
+        device_class=SensorDeviceClass.POWER,
+        native_unit_of_measurement=UnitOfPower.WATT,
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+    SensorEntityDescription(
+        key="today_production",
+        translation_key="port_today_production",
+        device_class=SensorDeviceClass.ENERGY,
+        native_unit_of_measurement=UnitOfEnergy.WATT_HOUR,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+    ),
+    SensorEntityDescription(
+        key="total_production",
+        translation_key="port_total_production",
+        device_class=SensorDeviceClass.ENERGY,
+        native_unit_of_measurement=UnitOfEnergy.WATT_HOUR,
+        state_class=SensorStateClass.TOTAL_INCREASING,
     ),
 )

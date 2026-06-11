@@ -48,15 +48,18 @@
       "pv_power": { "name": "PV power" },
       "today_production": { "name": "Today's production" },
       "total_production": { "name": "Total production" },
-      "pv_voltage": { "name": "PV voltage" },
-      "pv_current": { "name": "PV current" },
       "grid_voltage": { "name": "Grid voltage" },
       "grid_frequency": { "name": "Grid frequency" },
       "temperature": { "name": "Temperature" },
       "operating_status": { "name": "Operating status" },
       "alarm_code": { "name": "Alarm code" },
       "alarm_count": { "name": "Alarm count" },
-      "link_status": { "name": "Link status" }
+      "link_status": { "name": "Link status" },
+      "port_pv_voltage": { "name": "Port {port} PV voltage" },
+      "port_pv_current": { "name": "Port {port} PV current" },
+      "port_pv_power": { "name": "Port {port} PV power" },
+      "port_today_production": { "name": "Port {port} today's production" },
+      "port_total_production": { "name": "Port {port} total production" }
     },
     "binary_sensor": {
       "alarm_flag": { "name": "Alarm" }

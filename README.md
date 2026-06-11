@@ -117,7 +117,15 @@ a Home Assistant restart.
 When enabled, after each poll the integration publishes:
 
 - retained **discovery** messages under `homeassistant/<platform>/<serial>/<key>/config`
-- **state** messages (JSON) under `<base_topic>/<serial>/state`
+- **state** messages (JSON):
+  - plant/DTU: `<base_topic>/<dtu_serial>/state`
+  - microinverter (inverter-wide telemetry — grid, temperature, status): `<base_topic>/<serial>/state`
+  - each PV **port** of a microinverter (voltage/current/power/production):
+    `<base_topic>/<serial>/<port>/state`
+
+A microinverter with multiple PV inputs reports one record per port, so each port
+gets its own state topic and its own set of discovery entities (named `Port N …`),
+all grouped under the one microinverter device.
 
 This lets a second Home Assistant instance (or any MQTT consumer) auto-discover the
 same entities. MQTT publishing is *best effort*: failures are logged and never

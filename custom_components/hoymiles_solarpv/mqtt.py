@@ -23,7 +23,7 @@ from homeassistant.components.sensor import SensorDeviceClass, SensorEntityDescr
 from homeassistant.helpers.entity import EntityDescription
 
 from .const import MANUFACTURER
-from .descriptions import DTU_BINARY_SENSORS, DTU_SENSORS, MICROINVERTER_SENSORS
+from .descriptions import DTU_BINARY_SENSORS, DTU_SENSORS, MICROINVERTER_SENSORS, PORT_SENSORS
 
 if TYPE_CHECKING:
     from .hoymiles import MicroinverterData, PlantData
@@ -90,6 +90,9 @@ class HoymilesMqttPublisher:
     def _state_topic(self, device_serial: str) -> str:
         return f"{self._topic_base}/{device_serial}/state"
 
+    def _port_state_topic(self, device_serial: str, port: int) -> str:
+        return f"{self._topic_base}/{device_serial}/{port}/state"
+
     @staticmethod
     def _config_topic(platform: str, device_serial: str, key: str) -> str:
         return f"{_DISCOVERY_PREFIX}/{platform}/{device_serial}/{key}/config"
@@ -110,12 +113,26 @@ class HoymilesMqttPublisher:
             messages.append(
                 self._build_discovery("binary_sensor", "DTU", dtu_serial, dtu_serial, binary_sensor)
             )
+
+        seen_serials: set[str] = set()
         for microinverter in plant_data.microinverter_data:
             serial = microinverter.serial_number
-            for sensor in MICROINVERTER_SENSORS:
+            device_name = f"Inverter {serial}"
+            if serial not in seen_serials:
+                seen_serials.add(serial)
+                for sensor in MICROINVERTER_SENSORS:
+                    messages.append(
+                        self._build_discovery("sensor", device_name, serial, dtu_serial, sensor)
+                    )
+            for sensor in PORT_SENSORS:
                 messages.append(
                     self._build_discovery(
-                        "sensor", f"Inverter {serial}", serial, dtu_serial, sensor
+                        "sensor",
+                        device_name,
+                        serial,
+                        dtu_serial,
+                        sensor,
+                        port=microinverter.port_number,
                     )
                 )
         return messages
@@ -127,13 +144,22 @@ class HoymilesMqttPublisher:
         device_serial: str,
         dtu_serial: str,
         description: EntityDescription,
+        port: int | None = None,
     ) -> tuple[str, str]:
-        state_topic = self._state_topic(device_serial)
         key = description.key
+        if port is not None:
+            # Per-port entity: a distinct topic/name/id, but the same device.
+            state_topic = self._port_state_topic(device_serial, port)
+            entity_id = f"port{port}_{key}"
+            entity_name = f"Port {port} {key}"
+        else:
+            state_topic = self._state_topic(device_serial)
+            entity_id = key
+            entity_name = key
         payload: dict[str, object] = {
-            "name": key,
-            "unique_id": f"hoymiles_solarpv_{device_serial}_{key}",
-            "object_id": f"hoymiles_{device_serial}_{key}",
+            "name": entity_name,
+            "unique_id": f"hoymiles_solarpv_{device_serial}_{entity_id}",
+            "object_id": f"hoymiles_{device_serial}_{entity_id}",
             "state_topic": state_topic,
             "value_template": (
                 f"{{{{ value_json.{key} if value_json.{key} is defined else None }}}}"
@@ -154,7 +180,7 @@ class HoymilesMqttPublisher:
         state_class = getattr(description, "state_class", None)
         if state_class is not None:
             payload["state_class"] = str(state_class)
-        topic = self._config_topic(platform, device_serial, key)
+        topic = self._config_topic(platform, device_serial, entity_id)
         return topic, json.dumps(payload)
 
     def _state_payloads(self, plant_data: PlantData, timestamp: datetime) -> list[tuple[str, str]]:
@@ -173,10 +199,12 @@ class HoymilesMqttPublisher:
         seen: set[str] = set()
         for microinverter in plant_data.microinverter_data:
             serial = microinverter.serial_number
-            if serial in seen:
-                continue
-            seen.add(serial)
-            messages.append(self._microinverter_state(microinverter))
+            # Inverter-level state is published once per serial.
+            if serial not in seen:
+                seen.add(serial)
+                messages.append(self._microinverter_state(microinverter))
+            # Port-level state is published for every port record.
+            messages.append(self._port_state(microinverter))
         return messages
 
     def _microinverter_state(self, microinverter: MicroinverterData) -> tuple[str, str]:
@@ -186,6 +214,15 @@ class HoymilesMqttPublisher:
         }
         return (
             self._state_topic(microinverter.serial_number),
+            json.dumps(values, default=_json_default),
+        )
+
+    def _port_state(self, microinverter: MicroinverterData) -> tuple[str, str]:
+        values = {
+            description.key: getattr(microinverter, description.key) for description in PORT_SENSORS
+        }
+        return (
+            self._port_state_topic(microinverter.serial_number, microinverter.port_number),
             json.dumps(values, default=_json_default),
         )
 
