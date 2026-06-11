@@ -54,6 +54,10 @@ Copy the `custom_components/hoymiles_solarpv` directory into your Home Assistant
 
 ## Configuration
 
+> **Note:** Installing via HACS only copies the files — it does **not** create a
+> device. You must add the integration afterwards (step 1 below) to enter the
+> connection settings.
+
 Configuration is done entirely through the UI:
 
 1. Go to **Settings → Devices & Services → Add Integration**.
@@ -78,6 +82,20 @@ the DTU serial number as a unique identifier.
 
 After setup, open the integration's **Configure** dialog to change the **polling
 interval** (in seconds, default `60`).
+
+### Reconfigure (change host / MQTT)
+
+To change the DTU host/port, microinverter type, unit ID or MQTT settings after
+setup: **Settings → Devices & Services → Hoymiles SolarPV → ⋮ → Reconfigure**.
+The form is pre-filled with your current values; the connection is re-validated and
+must still report the same DTU serial.
+
+### Verify your settings
+
+To see exactly what is stored (handy if you're unsure what was entered):
+**Settings → Devices & Services → Hoymiles SolarPV → ⋮ → Download diagnostics**.
+The downloaded file lists the host, port, type, unit ID and MQTT settings (the MQTT
+password is redacted) plus the latest poll summary.
 
 ## Entities
 

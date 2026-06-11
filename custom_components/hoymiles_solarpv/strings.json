@@ -22,6 +22,28 @@
           "unit_id": "Modbus unit/device ID of the DTU (usually 1).",
           "mqtt_topic": "Base topic that all published state messages are nested under."
         }
+      },
+      "reconfigure": {
+        "title": "Reconfigure Hoymiles DTU",
+        "description": "Update the connection and MQTT settings. The DTU serial must stay the same.",
+        "data": {
+          "host": "DTU host",
+          "port": "DTU Modbus port",
+          "microinverter_type": "Microinverter type",
+          "unit_id": "Modbus unit ID",
+          "mqtt_enabled": "Re-publish data to an external MQTT broker",
+          "mqtt_host": "MQTT broker host",
+          "mqtt_port": "MQTT broker port",
+          "mqtt_username": "MQTT username",
+          "mqtt_password": "MQTT password",
+          "mqtt_topic": "MQTT base topic"
+        },
+        "data_description": {
+          "host": "IP address or hostname of the DTU.",
+          "microinverter_type": "MI or HM series. All microinverters must be the same type.",
+          "unit_id": "Modbus unit/device ID of the DTU (usually 1).",
+          "mqtt_topic": "Base topic that all published state messages are nested under."
+        }
       }
     },
     "error": {
@@ -30,7 +52,9 @@
       "unknown": "An unexpected error occurred."
     },
     "abort": {
-      "already_configured": "This DTU is already configured."
+      "already_configured": "This DTU is already configured.",
+      "reconfigure_successful": "Settings updated successfully.",
+      "wrong_dtu": "That connection points at a different DTU than the one configured here."
     }
   },
   "options": {

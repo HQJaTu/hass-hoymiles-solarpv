@@ -110,3 +110,48 @@ async def test_options_flow(hass: HomeAssistant) -> None:
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["data"] == {"scan_interval": 30}
+
+
+async def test_reconfigure_updates_settings(hass: HomeAssistant) -> None:
+    """Reconfigure updates the stored connection settings for the same DTU."""
+    entry = MockConfigEntry(domain=DOMAIN, unique_id="aabbccddeeff", data=dict(_BASE_INPUT))
+    entry.add_to_hass(hass)
+
+    result = await entry.start_reconfigure_flow(hass)
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "reconfigure"
+
+    new_input = dict(_BASE_INPUT)
+    new_input[CONF_HOST] = "10.0.0.9"
+    with (
+        patch(
+            "custom_components.hoymiles_solarpv.config_flow.HoymilesModbusTCP.get_dtu_serial",
+            return_value="aabbccddeeff",
+        ),
+        patch("custom_components.hoymiles_solarpv.async_setup_entry", return_value=True),
+    ):
+        result = await hass.config_entries.flow.async_configure(result["flow_id"], new_input)
+        await hass.async_block_till_done()
+
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "reconfigure_successful"
+    assert entry.data[CONF_HOST] == "10.0.0.9"
+
+
+async def test_reconfigure_rejects_different_dtu(hass: HomeAssistant) -> None:
+    """Reconfigure aborts if the new connection reports a different DTU serial."""
+    entry = MockConfigEntry(domain=DOMAIN, unique_id="aabbccddeeff", data=dict(_BASE_INPUT))
+    entry.add_to_hass(hass)
+
+    result = await entry.start_reconfigure_flow(hass)
+    with patch(
+        "custom_components.hoymiles_solarpv.config_flow.HoymilesModbusTCP.get_dtu_serial",
+        return_value="ffffffffffff",
+    ):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], dict(_BASE_INPUT)
+        )
+
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "wrong_dtu"
+    assert entry.data[CONF_HOST] == "192.168.1.50"  # unchanged

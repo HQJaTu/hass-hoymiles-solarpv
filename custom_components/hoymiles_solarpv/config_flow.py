@@ -88,37 +88,63 @@ class HoymilesConfigFlow(ConfigFlow, domain=DOMAIN):
 
     VERSION = 1
 
+    _validated_serial: str = ""
+
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """
         Handle the initial step.
         :param user_input: A user input data that contains a dictionary that represents
         :return ConfigFlowResult
         """
-        errors: dict[str, str] = {}
-        if user_input is not None:
-            if user_input.get(CONF_MQTT_ENABLED) and not user_input.get(CONF_MQTT_HOST):
-                errors[CONF_MQTT_HOST] = "mqtt_host_required"
-            else:
-                try:
-                    serial = await _validate_connection(self.hass, user_input)
-                except HoymilesModbusError:
-                    errors["base"] = "cannot_connect"
-                except Exception:  # noqa: BLE001 - defensive: report as unknown
-                    _LOGGER.exception("Unexpected error validating Hoymiles DTU connection")
-                    errors["base"] = "unknown"
-                else:
-                    await self.async_set_unique_id(serial)
-                    self._abort_if_unique_id_configured()
-                    return self.async_create_entry(
-                        title=f"Hoymiles DTU {serial}",
-                        data=user_input,
-                    )
+        errors = await self._validate_input(user_input)
+        if user_input is not None and not errors:
+            serial = self._validated_serial
+            await self.async_set_unique_id(serial)
+            self._abort_if_unique_id_configured()
+            return self.async_create_entry(title=f"Hoymiles DTU {serial}", data=user_input)
 
         return self.async_show_form(
             step_id="user",
             data_schema=self.add_suggested_values_to_schema(STEP_USER_DATA_SCHEMA, user_input),
             errors=errors,
         )
+
+    async def async_step_reconfigure(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Handle reconfiguration of an existing entry (host/port/MQTT/etc.)."""
+        reconfigure_entry = self._get_reconfigure_entry()
+
+        errors = await self._validate_input(user_input)
+        if user_input is not None and not errors:
+            # Make sure the (re)entered connection still points at the same DTU.
+            await self.async_set_unique_id(self._validated_serial)
+            self._abort_if_unique_id_mismatch(reason="wrong_dtu")
+            return self.async_update_reload_and_abort(reconfigure_entry, data=user_input)
+
+        return self.async_show_form(
+            step_id="reconfigure",
+            data_schema=self.add_suggested_values_to_schema(
+                STEP_USER_DATA_SCHEMA, user_input or dict(reconfigure_entry.data)
+            ),
+            errors=errors,
+        )
+
+    async def _validate_input(self, user_input: dict[str, Any] | None) -> dict[str, str]:
+        """Validate user input, caching the discovered serial. Returns form errors."""
+        self._validated_serial = ""
+        if user_input is None:
+            return {}
+        if user_input.get(CONF_MQTT_ENABLED) and not user_input.get(CONF_MQTT_HOST):
+            return {CONF_MQTT_HOST: "mqtt_host_required"}
+        try:
+            self._validated_serial = await _validate_connection(self.hass, user_input)
+        except HoymilesModbusError:
+            return {"base": "cannot_connect"}
+        except Exception:  # noqa: BLE001 - defensive: report as unknown
+            _LOGGER.exception("Unexpected error validating Hoymiles DTU connection")
+            return {"base": "unknown"}
+        return {}
 
     @staticmethod
     @callback

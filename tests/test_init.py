@@ -83,3 +83,35 @@ async def test_setup_failure_raises_retry(hass: HomeAssistant) -> None:
         await hass.async_block_till_done()
 
     assert entry.state is ConfigEntryState.SETUP_RETRY
+
+
+async def test_diagnostics_redacts_password(hass: HomeAssistant, sample_plant_data) -> None:
+    """Diagnostics expose the settings for verification, with the password hidden."""
+    from custom_components.hoymiles_solarpv.const import (
+        CONF_MQTT_HOST,
+        CONF_MQTT_PASSWORD,
+    )
+    from custom_components.hoymiles_solarpv.diagnostics import (
+        async_get_config_entry_diagnostics,
+    )
+
+    # MQTT stays disabled (so setup doesn't open a broker socket), but the stored
+    # credentials are still present and must be redacted in diagnostics.
+    data = dict(_ENTRY_DATA)
+    data[CONF_MQTT_HOST] = "10.0.0.5"
+    data[CONF_MQTT_PASSWORD] = "supersecret"
+
+    entry = MockConfigEntry(domain=DOMAIN, unique_id="aabbccddeeff", data=data)
+    entry.add_to_hass(hass)
+    with patch(
+        "custom_components.hoymiles_solarpv.coordinator.HoymilesModbusTCP.get_plant_data",
+        return_value=sample_plant_data,
+    ):
+        await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+
+    diag = await async_get_config_entry_diagnostics(hass, entry)
+    assert diag["config"]["data"][CONF_HOST] == "192.168.1.50"
+    assert diag["config"]["data"][CONF_MQTT_HOST] == "10.0.0.5"
+    assert diag["config"]["data"][CONF_MQTT_PASSWORD] == "**REDACTED**"
+    assert diag["data"]["dtu"] == "aabbccddeeff"
