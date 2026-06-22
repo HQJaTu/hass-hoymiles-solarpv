@@ -238,8 +238,8 @@ def _run_selftest() -> int:
         (12, 300, 1000, 3, "midday"),
         (14, 290, 1000, 3, "dip -> clamped"),
         (20, 540, 1300, 3, "evening peak"),
-        (22, 5, 1300, 3, "22:00 DTU reset"),
-        (23, 12, 1320, 3, "after reset"),
+        (22, 540, 1300, 0, "22:00 idle -> today preserved"),
+        (23, 12, 1320, 3, "23:00 DTU reset -> follows down"),
     ]
     for hour, today, total, status, note in timeline:
         plant = hoymiles.PlantData(

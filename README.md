@@ -123,12 +123,12 @@ Home Assistant **Energy dashboard**.
 ### Production smoothing & daily reset
 
 Hoymiles DTUs occasionally report a momentarily *lower* today/total production
-value, and they reset the **today** counter at ~22:00 local time (not midnight).
+value, and they reset the **today** counter at 23:00 local time (not midnight).
 To keep the Energy dashboard accurate the integration keeps an in-memory monotonic
 cache per microinverter port: transient dips are clamped to the last good value,
-while the genuine daily reset around hour 22 is detected and lets the today counter
-fall back to zero exactly once per day. The cache is rebuilt from live values after
-a Home Assistant restart.
+while during the 23:00 reset hour the today cache is dropped each poll so it follows
+the DTU's counter back to zero. The cache is rebuilt from live values after a Home
+Assistant restart.
 
 ## MQTT re-publishing
 

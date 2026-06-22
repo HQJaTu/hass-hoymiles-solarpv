@@ -100,7 +100,7 @@ table (long option name as the key, dashes kept). See
 
 ```bash
 # Offline logic check — parses a synthetic record and simulates a day
-# (incl. the 22:00 reset) through the production cache. No hardware needed.
+# (incl. the 23:00 reset) through the production cache. No hardware needed.
 python scripts/debug_dtu.py --selftest
 
 # Read a real DTU once and print the decoded plant data

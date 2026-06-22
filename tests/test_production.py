@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 
 from custom_components.hoymiles_solarpv.hoymiles import MicroinverterData, PlantData
-from custom_components.hoymiles_solarpv.production import ProductionCache
+from custom_components.hoymiles_solarpv.production import RESET_HOUR, ProductionCache
 
 
 def _mi(serial: str, port: int, today: int, total: int, status: int = 1) -> MicroinverterData:
@@ -63,30 +63,24 @@ def test_today_dip_is_clamped_within_day():
     assert plant.today_production == 500
 
 
-def test_daily_reset_at_22_clears_today():
-    """When today drops for all ports at the reset hour, the cache resets to the new value."""
+def test_today_preserved_in_evening_when_inverters_idle():
+    """Regression: idle inverters in the evening must not zero today early.
+
+    The DTU resets its counter at RESET_HOUR (23:00), not at sundown. If panels
+    stop producing at, say, 22:00, the day's accumulated total must remain until
+    the DTU itself rolls over -- otherwise only a fraction is published.
+    """
     cache = ProductionCache()
-    cache.process(_plant(_mi("a", 1, today=500, total=1000)), _at(20))
+    cache.process(_plant(_mi("a", 1, today=4800, total=10000)), _at(15))
 
-    plant = _plant(_mi("a", 1, today=4, total=1000))  # DTU rolled over at 22:00
+    # Evening, before the reset hour, no operating ports (sun down).
+    plant = _plant(_mi("a", 1, today=0, total=10000, status=0))
     cache.process(plant, _at(22))
-    assert plant.today_production == 4
-    assert plant.microinverter_data[0].today_production == 4
-
-
-def test_reset_happens_only_once_per_day():
-    """After the reset, a further dip the same day is clamped, not reset again."""
-    cache = ProductionCache()
-    cache.process(_plant(_mi("a", 1, today=500, total=1000)), _at(20))
-    cache.process(_plant(_mi("a", 1, today=10, total=1000)), _at(22))  # reset -> today=10
-
-    plant = _plant(_mi("a", 1, today=3, total=1000))  # later dip, same day
-    cache.process(plant, _at(22))
-    assert plant.today_production == 10  # clamped to post-reset max, no second reset
+    assert plant.today_production == 4800  # preserved, NOT a fraction
 
 
 def test_no_reset_before_reset_hour():
-    """An all-ports drop before 22:00 is treated as a glitch, not a reset."""
+    """A dip before the reset hour is treated as a glitch, not a reset."""
     cache = ProductionCache()
     cache.process(_plant(_mi("a", 1, today=500, total=1000)), _at(12))
 
@@ -95,15 +89,38 @@ def test_no_reset_before_reset_hour():
     assert plant.today_production == 500  # clamped, no reset
 
 
-def test_no_production_after_reset_hour_clears_today():
-    """No operating ports past the reset hour clears the stale today total once."""
+def test_reset_hour_follows_dtu_counter_down():
+    """During the reset hour the today cache follows the DTU's reset value."""
     cache = ProductionCache()
-    cache.process(_plant(_mi("a", 1, today=500, total=1000)), _at(20))
+    cache.process(_plant(_mi("a", 1, today=4800, total=10000)), _at(15))
 
-    # After sundown the port is no longer operating; past 22:00 -> reset.
-    plant = _plant(_mi("a", 1, today=0, total=1000, status=0))
-    cache.process(plant, _at(23))
+    # At 23:00 the DTU has rolled its today counter over; a little new production.
+    plant = _plant(_mi("a", 1, today=20, total=10000))
+    cache.process(plant, _at(RESET_HOUR))
+    assert plant.today_production == 20
+    assert plant.microinverter_data[0].today_production == 20
+
+
+def test_reset_hour_with_no_production_zeroes_today():
+    """During the reset hour with nothing producing, today drops to zero."""
+    cache = ProductionCache()
+    cache.process(_plant(_mi("a", 1, today=4800, total=10000)), _at(15))
+
+    plant = _plant(_mi("a", 1, today=0, total=10000, status=0))
+    cache.process(plant, _at(RESET_HOUR))
     assert plant.today_production == 0
+    assert plant.total_production == 10000  # total is never cleared
+
+
+def test_today_accumulates_again_after_reset_hour():
+    """After the reset hour, the next day's production accumulates normally."""
+    cache = ProductionCache()
+    cache.process(_plant(_mi("a", 1, today=4800, total=10000)), _at(15, day=8))
+    cache.process(_plant(_mi("a", 1, today=30, total=10000)), _at(RESET_HOUR, day=8))
+
+    plant = _plant(_mi("a", 1, today=1200, total=11200))
+    cache.process(plant, _at(8, day=9))
+    assert plant.today_production == 1200
 
 
 def test_non_operating_port_keeps_cached_total():
@@ -116,6 +133,27 @@ def test_non_operating_port_keeps_cached_total():
     assert plant.total_production == 1000
 
 
+def test_idle_port_still_counted_in_plant_sum():
+    """A port that goes idle keeps contributing its cached value to the plant sum."""
+    cache = ProductionCache()
+    cache.process(
+        _plant(
+            _mi("a", 1, today=1000, total=5000),
+            _mi("a", 2, today=1500, total=6000),
+        ),
+        _at(12),
+    )
+
+    # Port 2 goes idle; port 1 keeps producing.
+    plant = _plant(
+        _mi("a", 1, today=1100, total=5100),
+        _mi("a", 2, today=0, total=0, status=0),
+    )
+    cache.process(plant, _at(13))
+    assert plant.today_production == 1100 + 1500  # port 2 retains its cached 1500
+    assert plant.total_production == 5100 + 6000
+
+
 def test_aggregates_sum_across_ports():
     """Plant totals are the sum of all cached ports."""
     cache = ProductionCache()
@@ -126,16 +164,3 @@ def test_aggregates_sum_across_ports():
     cache.process(plant, _at(12))
     assert plant.today_production == 300
     assert plant.total_production == 4000
-
-
-def test_new_day_allows_reset_again():
-    """The reset can fire again on a subsequent day."""
-    cache = ProductionCache()
-    cache.process(_plant(_mi("a", 1, today=500, total=1000)), _at(20, day=8))
-    cache.process(_plant(_mi("a", 1, today=8, total=1000)), _at(22, day=8))  # reset day 8
-
-    # Next day builds up then resets again.
-    cache.process(_plant(_mi("a", 1, today=400, total=1500)), _at(12, day=9))
-    plant = _plant(_mi("a", 1, today=6, total=1500))
-    cache.process(plant, _at(22, day=9))
-    assert plant.today_production == 6
