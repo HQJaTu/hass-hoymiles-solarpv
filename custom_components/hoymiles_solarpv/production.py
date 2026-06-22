@@ -41,7 +41,8 @@ type _PortKey = tuple[str, int]
 
 
 class ProductionCache:
-    """Smooth production dips and follow the DTU's daily ``today`` reset.
+    """
+    Smooth production dips and follow the DTU's daily ``today`` reset.
 
     A single instance is kept per config entry and fed every poll via
     :meth:`process`, which mutates the given :class:`PlantData` in place.
@@ -54,13 +55,12 @@ class ProductionCache:
         self._total: dict[_PortKey, int] = {}
 
     def process(self, plant_data: PlantData, now: datetime) -> None:
-        """Clamp production dips, follow the daily reset and recompute totals.
-
-        Arguments:
-            plant_data: freshly polled plant data; mutated in place.
-            now: current local (timezone-aware) time, used for reset detection.
-
         """
+        Clamp production dips, follow the daily reset and recompute totals.
+        :param plant_data: freshly polled plant data; mutated in place.
+        :param now: current local (timezone-aware) time, used for reset detection.
+        """
+
         # During the DTU's reset hour, drop the today cache on every poll so it
         # tracks the DTU's counter back down to zero instead of staying pinned at
         # yesterday's peak. The total cache is cumulative and never cleared.
@@ -73,11 +73,14 @@ class ProductionCache:
         plant_data.total_production = sum(self._total.values())
 
     def _update_cache(self, plant_data: PlantData) -> None:
-        """Update the monotonic per-port today/total caches from a poll.
+        """
+        Update the monotonic per-port today/total caches from a poll.
 
         Every port in the poll gets a cache entry (so the plant sum never silently
         drops a port), but values are only updated for operating ports. A reading
         below the cached maximum is treated as a transient fault and clamped up.
+
+        :param plant_data: freshly polled plant data
         """
         for microinverter in plant_data.microinverter_data:
             key = (microinverter.serial_number, microinverter.port_number)
