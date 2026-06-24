@@ -122,13 +122,19 @@ Home Assistant **Energy dashboard**.
 
 ### Production smoothing & daily reset
 
-Hoymiles DTUs occasionally report a momentarily *lower* today/total production
-value, and they reset the **today** counter at 23:00 local time (not midnight).
-To keep the Energy dashboard accurate the integration keeps an in-memory monotonic
-cache per microinverter port: transient dips are clamped to the last good value,
-while during the 23:00 reset hour the today cache is dropped each poll so it follows
-the DTU's counter back to zero. The cache is rebuilt from live values after a Home
-Assistant restart.
+The DTU's `today`/`total` production registers are **cumulative** — within a day
+they only ever rise (a cloud lowers instantaneous power, not accumulated Wh). To
+keep the Energy dashboard and external tooling accurate, the integration keeps an
+in-memory monotonic cache per microinverter port: transient single-port dips are
+clamped back up to the last good value. The DTU's once-a-day `today` rollover
+(every port drops to ~0 at the same poll) is detected and applied as a single clean
+step down, so the value never stair-steps. `total` is a lifetime counter and is
+never reset. The cache is rebuilt from live values after a Home Assistant restart.
+
+> **Computing power from energy (Grafana/Prometheus etc.):** prefer deriving power
+> from **`total_production`** (e.g. `rate(...total_production...[1h]) * 3600`). It is
+> a lifetime counter that never resets, so `rate()` never sees a daily rollover.
+> Using `today_production` works too, but `rate()` will register one reset per day.
 
 ## MQTT re-publishing
 

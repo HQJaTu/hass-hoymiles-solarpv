@@ -1,72 +1,59 @@
 """
 Production smoothing and daily-reset handling for Hoymiles DTU data.
 
-Hoymiles DTUs have two quirks that this module compensates for:
+A microinverter's ``today`` / ``total`` production registers are **cumulative**:
+within a day they can only ever increase (a cloud lowers instantaneous *power*,
+never the accumulated Wh). The only time ``today`` decreases is the DTU's once-a-day
+rollover, when every port resets to ~0 simultaneously. ``total`` is a lifetime
+counter and never resets.
 
-1. They occasionally report a *lower* ``today``/``total`` production value than a
-   previous reading (transient glitch). Left untouched this looks like a counter
-   reset to Home Assistant's ``total_increasing`` statistics and produces false
-   spikes on the Energy dashboard. We therefore keep a monotonic (max) cache per
-   microinverter port and clamp dips back up to the cached value.
+Two quirks need compensating for:
 
-2. They reset the *today* production counter once a day at ``RESET_HOUR`` local
-   time (not midnight). The monotonic cache above would otherwise pin ``today`` to
-   the previous day's peak, so during that hour the today cache is dropped on every
-   poll, letting it follow the DTU's counter back down to zero and up again.
+1. The DTU occasionally reports a momentarily *lower* value (a transient glitch on
+   a single port). Left untouched this looks like a counter reset to consumers
+   (Home Assistant statistics, Grafana ``rate()``) and produces false spikes. We
+   keep a monotonic (max) cache per port and clamp such dips back up.
 
-This mirrors the proven behaviour of the upstream ``hoymiles_mqtt`` project: a
-plain per-poll clear during the reset hour, rather than trying to *detect* the
-reset (which is fragile — e.g. an evening with no operating inverters must not be
-mistaken for a counter reset). The cache lives only in memory; it is rebuilt from
-live DTU values after a Home Assistant restart, which also means a stuck value
-self-heals on restart.
+2. The DTU's daily ``today`` rollover. Because the registers are cumulative, *any*
+   genuine decrease across **all** operating ports at once is the rollover — never
+   noise. We detect that and drop the today cache in a single clean step so the
+   published value falls to ~0 exactly once, instead of stair-stepping (which a
+   clock-based per-poll clear used to cause, warping ``rate()`` badly).
+
+The cache lives only in memory and is rebuilt from live DTU values after a Home
+Assistant restart.
 """
 
 from __future__ import annotations
 
 import logging
-from datetime import datetime
 
 from .hoymiles import PlantData
 
 _LOGGER = logging.getLogger(__name__)
-
-# Local-time hour during which Hoymiles DTUs reset their *today* production
-# counter. This matches the upstream project's value; the DTU does NOT reset at
-# midnight. Clearing earlier (e.g. at sundown) would zero "today" before the DTU
-# does and publish only a fraction of the day's production.
-RESET_HOUR = 23
 
 type _PortKey = tuple[str, int]
 
 
 class ProductionCache:
     """
-    Smooth production dips and follow the DTU's daily ``today`` reset.
+    Smooth production dips and follow the DTU's daily ``today`` rollover.
 
     A single instance is kept per config entry and fed every poll via
     :meth:`process`, which mutates the given :class:`PlantData` in place.
     """
 
-    def __init__(self, reset_hour: int = RESET_HOUR) -> None:
+    def __init__(self) -> None:
         """Initialize an empty cache."""
-        self._reset_hour = reset_hour
         self._today: dict[_PortKey, int] = {}
         self._total: dict[_PortKey, int] = {}
 
-    def process(self, plant_data: PlantData, now: datetime) -> None:
+    def process(self, plant_data: PlantData) -> None:
         """
-        Clamp production dips, follow the daily reset and recompute totals.
+        Clamp production dips, follow the daily reset and recompute plant totals.
+
         :param plant_data: freshly polled plant data; mutated in place.
-        :param now: current local (timezone-aware) time, used for reset detection.
         """
-
-        # During the DTU's reset hour, drop the today cache on every poll so it
-        # tracks the DTU's counter back down to zero instead of staying pinned at
-        # yesterday's peak. The total cache is cumulative and never cleared.
-        if now.hour == self._reset_hour:
-            self._clear_today()
-
         self._update_cache(plant_data)
 
         plant_data.today_production = sum(self._today.values())
@@ -78,10 +65,17 @@ class ProductionCache:
 
         Every port in the poll gets a cache entry (so the plant sum never silently
         drops a port), but values are only updated for operating ports. A reading
-        below the cached maximum is treated as a transient fault and clamped up.
+        below the cached maximum is treated as a transient fault and clamped up,
+        unless it is the DTU's daily rollover (handled atomically first).
 
         :param plant_data: freshly polled plant data
         """
+        operating = [mi for mi in plant_data.microinverter_data if mi.operating_status > 0]
+
+        if self._is_daily_reset(operating):
+            _LOGGER.info("Detected Hoymiles daily today-production rollover; resetting today cache")
+            self._today = {}
+
         for microinverter in plant_data.microinverter_data:
             key = (microinverter.serial_number, microinverter.port_number)
             self._today.setdefault(key, 0)
@@ -115,6 +109,26 @@ class ProductionCache:
                 )
                 microinverter.total_production = self._total[key]
 
-    def _clear_today(self) -> None:
-        _LOGGER.debug("Clearing today production cache (DTU reset hour)")
-        self._today = {}
+    def _is_daily_reset(self, operating: list) -> bool:
+        """
+        Return True if the DTU has rolled its daily ``today`` counters over.
+
+        The rollover zeroes every port at once, so it is recognised when *every*
+        operating port that previously had real production now reports well under
+        half of its cached value. A single glitching port (others unchanged) does
+        not qualify — that is smoothed as a dip instead.
+
+        :param operating: microinverter records with ``operating_status > 0``
+        """
+        relevant = [
+            microinverter
+            for microinverter in operating
+            if self._today.get((microinverter.serial_number, microinverter.port_number), 0) > 0
+        ]
+        if not relevant:
+            return False
+        return all(
+            microinverter.today_production * 2
+            < self._today[(microinverter.serial_number, microinverter.port_number)]
+            for microinverter in relevant
+        )

@@ -43,7 +43,6 @@ import struct
 import sys
 import time
 import types
-from datetime import datetime
 from pathlib import Path
 
 import configargparse
@@ -137,7 +136,7 @@ def _run_live(args: configargparse.Namespace) -> int:
             _LOGGER.error("Failed to read DTU: %s", err)
             return
         if cache is not None:
-            cache.process(plant, datetime.now().astimezone())
+            cache.process(plant)
         _print_plant(plant)
         if publisher is not None:
             try:
@@ -235,13 +234,13 @@ def _run_selftest() -> int:
     print("\n== Simulating a day through the production cache ==")
     cache = production.ProductionCache()
     timeline = [
-        (12, 300, 1000, 3, "midday"),
-        (14, 290, 1000, 3, "dip -> clamped"),
-        (20, 540, 1300, 3, "evening peak"),
-        (22, 540, 1300, 0, "22:00 idle -> today preserved"),
-        (23, 12, 1320, 3, "23:00 DTU reset -> follows down"),
+        (300, 1000, 3, "midday"),
+        (290, 1000, 3, "glitch dip -> clamped to 300"),
+        (540, 1300, 3, "evening peak"),
+        (540, 1300, 0, "inverter idle -> today preserved"),
+        (8, 1320, 3, "DTU rollover -> today follows to ~0"),
     ]
-    for hour, today, total, status, note in timeline:
+    for step, (today, total, status, note) in enumerate(timeline, start=1):
         plant = hoymiles.PlantData(
             dtu="aabbccddeeff",
             microinverter_data=[
@@ -250,9 +249,9 @@ def _run_selftest() -> int:
                 )
             ],
         )
-        cache.process(plant, datetime(2026, 6, 9, hour, 0).astimezone())
+        cache.process(plant)
         print(
-            f"  {hour:02d}:00  raw_today={today:<5} -> cached_today={plant.today_production:<5} "
+            f"  poll {step}  raw_today={today:<5} -> cached_today={plant.today_production:<5} "
             f"total={plant.total_production:<6} ({note})"
         )
     print("\nSelf-test complete.")

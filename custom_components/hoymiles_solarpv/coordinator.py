@@ -76,9 +76,9 @@ class HoymilesDataUpdateCoordinator(DataUpdateCoordinator[PlantData]):
         except HoymilesModbusError as err:
             raise UpdateFailed(f"Error communicating with Hoymiles DTU: {err}") from err
 
-        # Smooth DTU production glitches and handle the ~22:00 daily reset before
-        # the data reaches any entity or the MQTT publisher.
-        self._production_cache.process(plant_data, dt_util.now())
+        # Smooth DTU production glitches and follow the daily counter rollover
+        # before the data reaches any entity or the MQTT publisher.
+        self._production_cache.process(plant_data)
 
         if self._mqtt_enabled and self._mqtt_publisher is not None:
             # MQTT publishing must never break data collection; log and continue.
