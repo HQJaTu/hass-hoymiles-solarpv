@@ -32,7 +32,7 @@ def test_parse_microinverter_mi_scaling():
     assert record.pv_voltage == Decimal("245.0")
     assert record.pv_current == Decimal("5.0")  # 50 / 10
     assert record.grid_voltage == Decimal("230.0")
-    assert record.grid_frequency == Decimal("50")  # 5000 / 100
+    assert record.grid_frequency == Decimal(50)  # 5000 / 100
     assert record.pv_power == Decimal("150.0")
     assert record.today_production == 120
     assert record.total_production == 654321
@@ -84,7 +84,7 @@ def _fake_client_context(registers_map):
     client = MagicMock()
     client.connected = True
 
-    def read_holding_registers(address, count, device_id):  # noqa: ARG001
+    def read_holding_registers(address, count, device_id):
         response = MagicMock()
         response.isError.return_value = False
         response.registers = registers_map[address]
@@ -150,6 +150,8 @@ def test_get_plant_data_wraps_errors():
     ctx.__enter__.return_value = bad_client
     ctx.__exit__.return_value = False
 
-    with patch.object(client, "_get_client", return_value=ctx):
-        with pytest.raises(HoymilesModbusError):
-            client.get_plant_data()
+    with (
+        patch.object(client, "_get_client", return_value=ctx),
+        pytest.raises(HoymilesModbusError),
+    ):
+        client.get_plant_data()

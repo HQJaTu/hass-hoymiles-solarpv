@@ -86,7 +86,7 @@ class HoymilesDataUpdateCoordinator(DataUpdateCoordinator[PlantData]):
                 await self.hass.async_add_executor_job(
                     self._mqtt_publisher.publish_plant_data, plant_data, dt_util.now()
                 )
-            except Exception:  # noqa: BLE001 - publishing is best effort
+            except Exception:
                 _LOGGER.exception("Failed to publish Hoymiles data to MQTT broker")
 
         return plant_data

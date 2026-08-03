@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
@@ -82,7 +82,7 @@ class HoymilesMqttPublisher:
         try:
             self._client.loop_stop()
             self._client.disconnect()
-        except Exception:  # noqa: BLE001 - best effort cleanup
+        except Exception:
             _LOGGER.debug("Error while disconnecting MQTT client", exc_info=True)
 
     # -- topic helpers ------------------------------------------------------
@@ -240,7 +240,7 @@ class HoymilesMqttPublisher:
         the coordinator is responsible for logging and continuing.
         """
         if timestamp is None:
-            timestamp = datetime.now(timezone.utc)
+            timestamp = datetime.now(UTC)
 
         self._ensure_connected()
 

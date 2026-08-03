@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from custom_components.hoymiles_solarpv.hoymiles import (
     MicroinverterType,
@@ -14,7 +14,7 @@ from custom_components.hoymiles_solarpv.mqtt import HoymilesMqttPublisher
 
 from .conftest import build_record
 
-_TS = datetime(2026, 6, 10, 12, 30, 45, tzinfo=timezone.utc)
+_TS = datetime(2026, 6, 10, 12, 30, 45, tzinfo=UTC)
 
 
 def _make_publisher() -> HoymilesMqttPublisher:
@@ -166,7 +166,7 @@ class _FakeMqttClient:
     def is_connected(self) -> bool:
         return self._connected
 
-    def connect(self, host, port):  # noqa: ARG002
+    def connect(self, host, port):
         self._connected = True
 
     def loop_start(self):

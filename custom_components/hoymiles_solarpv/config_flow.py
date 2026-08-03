@@ -141,7 +141,7 @@ class HoymilesConfigFlow(ConfigFlow, domain=DOMAIN):
             self._validated_serial = await _validate_connection(self.hass, user_input)
         except HoymilesModbusError:
             return {"base": "cannot_connect"}
-        except Exception:  # noqa: BLE001 - defensive: report as unknown
+        except Exception:
             _LOGGER.exception("Unexpected error validating Hoymiles DTU connection")
             return {"base": "unknown"}
         return {}

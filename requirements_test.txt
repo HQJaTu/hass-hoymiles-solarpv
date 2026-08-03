@@ -8,7 +8,9 @@ paho-mqtt>=1.6.1
 ConfigArgParse>=1.7
 pytest
 pytest-asyncio
-ruff
+# Pinned: ruff's default rule set / noqa handling changes between releases, which
+# otherwise breaks the scheduled CI run on every new ruff version.
+ruff==0.16.1
 black
 isort
 flake8
