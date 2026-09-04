@@ -67,9 +67,29 @@ class HoymilesMqttPublisher:
         self._client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
         if username:
             self._client.username_pw_set(username, password)
-        self._configured = False
+        # A (re)connect may follow a broker restart that lost its retained store,
+        # so the discovery configs are re-published once per connection. The epoch
+        # is bumped from paho's network thread; comparing it against the epoch the
+        # configs were last published for keeps a reconnect landing mid-publish
+        # from being mistaken for a configured connection.
+        self._connection_epoch = 0
+        self._configured_epoch: int | None = None
+        self._client.on_connect = self._on_connect
 
     # -- connection management ----------------------------------------------
+
+    def _on_connect(
+        self,
+        client: mqtt.Client,
+        userdata: object,
+        connect_flags: object,
+        reason_code: mqtt.ReasonCode,
+        properties: object = None,
+    ) -> None:
+        """Note a new connection, including reconnects paho performs on its own."""
+        if reason_code.is_failure:
+            return
+        self._connection_epoch += 1
 
     def _ensure_connected(self) -> None:
         if self._client.is_connected():
@@ -229,7 +249,7 @@ class HoymilesMqttPublisher:
     # -- public API ---------------------------------------------------------
 
     def publish_plant_data(self, plant_data: PlantData, timestamp: datetime | None = None) -> None:
-        """Publish discovery (once) and state messages for the given plant data.
+        """Publish discovery (once per connection) and state messages for the plant.
 
         Arguments:
             plant_data: the data to publish.
@@ -244,12 +264,16 @@ class HoymilesMqttPublisher:
 
         self._ensure_connected()
 
-        if not self._configured:
+        epoch = self._connection_epoch
+        if self._configured_epoch != epoch:
             for topic, payload in self._discovery_payloads(plant_data):
                 self._client.publish(topic, payload, retain=True)
-            self._configured = True
+            self._configured_epoch = epoch
             _LOGGER.debug("Published MQTT discovery config for DTU %s", plant_data.dtu)
 
+        dtu_state_topic = self._state_topic(plant_data.dtu)
         for topic, payload in self._state_payloads(plant_data, timestamp):
-            self._client.publish(topic, payload)
+            # The DTU state is retained so a consumer that (re)connects between
+            # polls immediately sees the last values and their ``last_update``.
+            self._client.publish(topic, payload, retain=topic == dtu_state_topic)
         _LOGGER.debug("Published MQTT state for DTU %s", plant_data.dtu)

@@ -5,6 +5,9 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime
 
+import paho.mqtt.client as mqtt
+from paho.mqtt.packettypes import PacketTypes
+
 from custom_components.hoymiles_solarpv.hoymiles import (
     MicroinverterType,
     PlantData,
@@ -16,15 +19,21 @@ from .conftest import build_record
 
 _TS = datetime(2026, 6, 10, 12, 30, 45, tzinfo=UTC)
 
+_CONNACK_OK = mqtt.ReasonCode(PacketTypes.CONNACK, "Success")
+_CONNACK_REFUSED = mqtt.ReasonCode(PacketTypes.CONNACK, "Not authorized")
+
 
 def _make_publisher() -> HoymilesMqttPublisher:
-    return HoymilesMqttPublisher(
+    publisher = HoymilesMqttPublisher(
         host="broker",
         port=1883,
         username=None,
         password=None,
         topic_base="homeassistant/hoymiles_solarpv",
     )
+    # Stand in for paho, wired to the publisher's own connect callback.
+    publisher._client = _FakeMqttClient(publisher._on_connect)
+    return publisher
 
 
 def test_discovery_payloads_cover_all_entities(sample_plant_data):
@@ -84,33 +93,81 @@ def test_state_payloads_serialize_decimals(sample_plant_data):
 
 
 def test_publish_plant_data_sends_configs_once(sample_plant_data):
-    """Discovery is published once (retained), state every call."""
+    """Discovery is published once per connection, state every call."""
     publisher = _make_publisher()
-    publisher._client = _FakeMqttClient()
 
     publisher.publish_plant_data(sample_plant_data)
     publisher.publish_plant_data(sample_plant_data)
 
-    retained = [m for m in publisher._client.published if m["retain"]]
-    non_retained = [m for m in publisher._client.published if not m["retain"]]
+    configs = [m for m in publisher._client.published if "/config" in m["topic"]]
+    states = [m for m in publisher._client.published if m["topic"].endswith("/state")]
     # 17 retained discovery messages (5 DTU + 7 inverter + 5 port) published once
-    assert len(retained) == 17
+    assert len(configs) == 17
+    assert all(m["retain"] for m in configs)
     # 3 state topics (DTU + inverter + 1 port) per publish call => 6 total
-    assert len(non_retained) == 6
+    assert len(states) == 6
+
+
+def test_publish_plant_data_republishes_configs_after_reconnect(sample_plant_data):
+    """A dropped connection re-sends discovery: the broker may have lost it."""
+    publisher = _make_publisher()
+
+    publisher.publish_plant_data(sample_plant_data)
+    # The broker went away and paho reconnects on the next publish.
+    publisher._client.drop_connection()
+    publisher.publish_plant_data(sample_plant_data)
+
+    configs = [m for m in publisher._client.published if "/config" in m["topic"]]
+    assert len(configs) == 17 * 2
+
+
+def test_silent_paho_reconnect_republishes_configs(sample_plant_data):
+    """A reconnect paho handles on its own also re-sends discovery."""
+    publisher = _make_publisher()
+
+    publisher.publish_plant_data(sample_plant_data)
+    # paho's network thread reconnected without this code ever seeing the drop.
+    publisher._on_connect(publisher._client, None, {}, _CONNACK_OK, None)
+    publisher.publish_plant_data(sample_plant_data)
+
+    configs = [m for m in publisher._client.published if "/config" in m["topic"]]
+    assert len(configs) == 17 * 2
+
+
+def test_refused_connection_does_not_republish_configs(sample_plant_data):
+    """A rejected CONNACK is not a new connection; discovery stays put."""
+    publisher = _make_publisher()
+
+    publisher.publish_plant_data(sample_plant_data)
+    publisher._on_connect(publisher._client, None, {}, _CONNACK_REFUSED, None)
+    publisher.publish_plant_data(sample_plant_data)
+
+    configs = [m for m in publisher._client.published if "/config" in m["topic"]]
+    assert len(configs) == 17
+
+
+def test_dtu_state_is_retained(sample_plant_data):
+    """DTU state is retained so consumers see it (and its age) on connect."""
+    publisher = _make_publisher()
+
+    publisher.publish_plant_data(sample_plant_data)
+
+    states = {m["topic"]: m for m in publisher._client.published if m["topic"].endswith("/state")}
+    assert states["homeassistant/hoymiles_solarpv/aabbccddeeff/state"]["retain"] is True
+    # Inverter and port state stay non-retained.
+    assert states["homeassistant/hoymiles_solarpv/112233445566/state"]["retain"] is False
+    assert states["homeassistant/hoymiles_solarpv/112233445566/1/state"]["retain"] is False
 
 
 def test_publish_plant_data_defaults_timestamp(sample_plant_data):
     """A last_update timestamp is published even when none is supplied."""
     publisher = _make_publisher()
-    publisher._client = _FakeMqttClient()
 
     publisher.publish_plant_data(sample_plant_data)
 
     dtu_topic = "homeassistant/hoymiles_solarpv/aabbccddeeff/state"
     dtu_state = next(
-        json.loads(m["payload"])
-        for m in publisher._client.published
-        if m["topic"] == dtu_topic and not m["retain"]
+        json.loads(m["payload"]) for m in publisher._client.published if m["topic"] == dtu_topic
     )
     # Value is present and parses back to an aware datetime.
     parsed = datetime.fromisoformat(dtu_state["last_update"])
@@ -159,18 +216,25 @@ def test_multi_port_microinverter_publishes_every_port():
 class _FakeMqttClient:
     """Minimal stand-in for paho's Client."""
 
-    def __init__(self) -> None:
+    def __init__(self, on_connect=None) -> None:
         self.published: list[dict] = []
         self._connected = False
+        self.on_connect = on_connect
 
     def is_connected(self) -> bool:
         return self._connected
 
     def connect(self, host, port):
         self._connected = True
+        if self.on_connect is not None:
+            self.on_connect(self, None, {}, _CONNACK_OK, None)
 
     def loop_start(self):
         pass
+
+    def drop_connection(self):
+        """Simulate the broker going away between publishes."""
+        self._connected = False
 
     def publish(self, topic, payload, retain=False):
         self.published.append({"topic": topic, "payload": payload, "retain": retain})
