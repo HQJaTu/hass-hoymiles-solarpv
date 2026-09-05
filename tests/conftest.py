@@ -18,8 +18,11 @@ pytest_plugins = ["pytest_homeassistant_custom_component"]
 
 @pytest.fixture(autouse=True)
 def auto_enable_custom_integrations(enable_custom_integrations):
-    """Enable loading of custom integrations in all tests."""
-    yield
+    """Enable loading of custom integrations in all tests.
+
+    The fixture exists only to pull in ``enable_custom_integrations``; it has no
+    teardown, so it returns rather than yielding.
+    """
 
 
 def build_record(
