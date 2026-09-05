@@ -132,8 +132,8 @@ def _run_live(args: configargparse.Namespace) -> int:
     def one_poll() -> None:
         try:
             plant = client.get_plant_data()
-        except hoymiles.HoymilesModbusError as err:
-            _LOGGER.error("Failed to read DTU: %s", err)
+        except hoymiles.HoymilesModbusError:
+            _LOGGER.exception("Failed to read DTU")
             return
         if cache is not None:
             cache.process(plant)
@@ -142,8 +142,8 @@ def _run_live(args: configargparse.Namespace) -> int:
             try:
                 publisher.publish_plant_data(plant)
                 _LOGGER.info("Published to MQTT broker %s:%s", args.mqtt_host, args.mqtt_port)
-            except Exception as err:  # noqa: BLE001 - debugging aid
-                _LOGGER.error("MQTT publish failed: %s", err)
+            except Exception:  # noqa: BLE001 - debugging aid
+                _LOGGER.exception("MQTT publish failed")
 
     try:
         one_poll()
@@ -170,10 +170,9 @@ def _build_publisher(args: configargparse.Namespace):
     try:
         mqtt = _load("mqtt")
     except ImportError as err:
-        _LOGGER.error(
-            "MQTT publishing needs Home Assistant importable (%s). "
-            "Install it with: pip install -r requirements_test.txt",
-            err,
+        _LOGGER.exception(
+            "MQTT publishing needs Home Assistant importable. "
+            "Install it with: pip install -r requirements_test.txt"
         )
         raise SystemExit(2) from err
 
