@@ -1,3 +1,11 @@
+# Direct test/dev dependencies. This file is the source of truth for humans;
+# CI installs from the resolved, hash-pinned requirements_test.lock instead.
+# After changing anything here, regenerate the lock (command in its header):
+#
+#   uv pip compile requirements_test.txt --generate-hashes \
+#     --only-binary :all: --no-binary mock-open,pyric \
+#     --python-version 3.14.2 -o requirements_test.lock
+#
 # pytest-homeassistant-custom-component pins the matching Home Assistant
 # release (0.13.337 -> homeassistant 2026.6.1, which requires Python >= 3.14.2).
 homeassistant==2026.6.1

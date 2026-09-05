@@ -25,7 +25,11 @@ async def async_setup_entry(
     entry: HoymilesConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
-    """Set up Hoymiles SolarPV sensors from a config entry."""
+    """Set up Hoymiles SolarPV sensors from a config entry.
+
+    ``hass`` is part of the platform signature Home Assistant calls with; this
+    platform takes everything it needs from ``entry.runtime_data``.
+    """
     coordinator = entry.runtime_data
     known_serials: set[str] = set()
     known_ports: set[tuple[str, int]] = set()
