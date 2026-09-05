@@ -1,0 +1,22 @@
+version: 2
+
+updates:
+  # The workflows pin every action to a full commit SHA, which stops them from
+  # picking up upstream fixes on their own. Dependabot re-pins them here and
+  # keeps the trailing "# vX.Y.Z" comment in step with the new SHA.
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:17"
+    # One PR for the whole set rather than five; this repo's actions move slowly
+    # and reviewing them together is less noise than a PR each.
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+    commit-message:
+      prefix: "chore(ci)"
+    labels:
+      - dependencies

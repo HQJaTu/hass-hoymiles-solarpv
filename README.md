@@ -141,8 +141,11 @@ never reset. The cache is rebuilt from live values after a Home Assistant restar
 When enabled, after each poll the integration publishes:
 
 - retained **discovery** messages under `homeassistant/<platform>/<serial>/<key>/config`
+  (re-sent whenever the publisher (re)connects, so a broker that lost its retained
+  store gets them back on the next poll)
 - **state** messages (JSON):
-  - plant/DTU: `<base_topic>/<dtu_serial>/state`
+  - plant/DTU: `<base_topic>/<dtu_serial>/state` — retained, so a consumer that
+    connects between polls sees the last values right away
   - microinverter (inverter-wide telemetry — grid, temperature, status): `<base_topic>/<serial>/state`
   - each PV **port** of a microinverter (voltage/current/power/production):
     `<base_topic>/<serial>/<port>/state`
