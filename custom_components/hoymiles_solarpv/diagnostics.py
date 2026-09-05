@@ -25,8 +25,8 @@ async def async_get_config_entry_diagnostics(
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry.
 
-    ``hass`` is part of the signature Home Assistant calls with; the snapshot is
-    built entirely from ``entry`` and its runtime data.
+    The hass parameter is part of the signature Home Assistant calls with; the
+    snapshot is built entirely from entry and its runtime data.
     """
     coordinator = entry.runtime_data
     plant = coordinator.data
