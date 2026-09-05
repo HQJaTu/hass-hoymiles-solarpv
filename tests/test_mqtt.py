@@ -70,6 +70,26 @@ def test_discovery_payloads_cover_all_entities(sample_plant_data):
     assert port_payload["name"] == "Port 1 pv_voltage"
 
 
+def test_discovery_device_blocks(sample_plant_data):
+    """DTU and inverter devices are named per serial and linked in one direction."""
+    publisher = _make_publisher()
+    messages = dict(publisher._discovery_payloads(sample_plant_data))
+
+    # The DTU name carries its serial so several DTUs stay distinguishable, and it
+    # is not its own via_device.
+    dtu_device = json.loads(messages["homeassistant/sensor/aabbccddeeff/pv_power/config"])["device"]
+    assert dtu_device["name"] == "DTU_aabbccddeeff"
+    assert dtu_device["identifiers"] == ["hoymiles_solarpv_aabbccddeeff"]
+    assert "via_device" not in dtu_device
+
+    # Microinverters keep pointing at the DTU they sit behind.
+    mi_device = json.loads(messages["homeassistant/sensor/112233445566/temperature/config"])[
+        "device"
+    ]
+    assert mi_device["name"] == "Inverter 112233445566"
+    assert mi_device["via_device"] == "hoymiles_solarpv_aabbccddeeff"
+
+
 def test_state_payloads_serialize_decimals(sample_plant_data):
     """State payloads render Decimals as numbers and binary flags as ON/OFF."""
     publisher = _make_publisher()
