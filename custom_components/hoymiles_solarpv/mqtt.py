@@ -123,15 +123,22 @@ class HoymilesMqttPublisher:
         """Build all retained discovery config messages for the plant."""
         messages: list[tuple[str, str]] = []
         dtu_serial = plant_data.dtu
+        # The serial has to be part of the device name: a plant can have several
+        # DTUs, and without it every one of them shows up as plain "DTU".
+        dtu_name = f"DTU_{dtu_serial}"
 
         for sensor in DTU_SENSORS:
-            messages.append(self._build_discovery("sensor", "DTU", dtu_serial, dtu_serial, sensor))
+            messages.append(
+                self._build_discovery("sensor", dtu_name, dtu_serial, dtu_serial, sensor)
+            )
         messages.append(
-            self._build_discovery("sensor", "DTU", dtu_serial, dtu_serial, _LAST_UPDATE_SENSOR)
+            self._build_discovery("sensor", dtu_name, dtu_serial, dtu_serial, _LAST_UPDATE_SENSOR)
         )
         for binary_sensor in DTU_BINARY_SENSORS:
             messages.append(
-                self._build_discovery("binary_sensor", "DTU", dtu_serial, dtu_serial, binary_sensor)
+                self._build_discovery(
+                    "binary_sensor", dtu_name, dtu_serial, dtu_serial, binary_sensor
+                )
             )
 
         seen_serials: set[str] = set()
@@ -176,6 +183,15 @@ class HoymilesMqttPublisher:
             state_topic = self._state_topic(device_serial)
             entity_id = key
             entity_name = key
+        device: dict[str, object] = {
+            "identifiers": [f"hoymiles_solarpv_{device_serial}"],
+            "name": device_name,
+            "manufacturer": MANUFACTURER,
+        }
+        if device_serial != dtu_serial:
+            # Only microinverters sit behind the DTU. Pointing the DTU at itself
+            # would make it its own via_device in the receiving device registry.
+            device["via_device"] = f"hoymiles_solarpv_{dtu_serial}"
         payload: dict[str, object] = {
             "name": entity_name,
             "unique_id": f"hoymiles_solarpv_{device_serial}_{entity_id}",
@@ -184,12 +200,7 @@ class HoymilesMqttPublisher:
             "value_template": (
                 f"{{{{ value_json.{key} if value_json.{key} is defined else None }}}}"
             ),
-            "device": {
-                "identifiers": [f"hoymiles_solarpv_{device_serial}"],
-                "name": device_name,
-                "manufacturer": MANUFACTURER,
-                "via_device": f"hoymiles_solarpv_{dtu_serial}",
-            },
+            "device": device,
         }
         device_class = getattr(description, "device_class", None)
         if device_class is not None:
