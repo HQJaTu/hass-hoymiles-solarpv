@@ -12,31 +12,18 @@ from .const import DOMAIN, MANUFACTURER
 from .coordinator import HoymilesDataUpdateCoordinator
 from .hoymiles import MicroinverterData
 
-# Home Assistant 2026.8 added DeviceInfo.via_device_id and deprecated via_device
-# (removed in 2027.8). Older releases only understand via_device.
-_HAS_VIA_DEVICE_ID = "via_device_id" in DeviceInfo.__annotations__
-
 
 def _microinverter_device_info(
     coordinator: HoymilesDataUpdateCoordinator, serial_number: str
 ) -> DeviceInfo:
     """Return the device info of a microinverter, linked to its DTU."""
-    if _HAS_VIA_DEVICE_ID and coordinator.dtu_device_id is not None:
-        return DeviceInfo(
-            identifiers={(DOMAIN, serial_number)},
-            name=f"Hoymiles Microinverter {serial_number}",
-            manufacturer=MANUFACTURER,
-            model="Microinverter",
-            serial_number=serial_number,
-            via_device_id=coordinator.dtu_device_id,
-        )
     return DeviceInfo(
         identifiers={(DOMAIN, serial_number)},
         name=f"Hoymiles Microinverter {serial_number}",
         manufacturer=MANUFACTURER,
         model="Microinverter",
         serial_number=serial_number,
-        via_device=(DOMAIN, coordinator.data.dtu),
+        via_device_id=coordinator.dtu_device_id,
     )
 
 

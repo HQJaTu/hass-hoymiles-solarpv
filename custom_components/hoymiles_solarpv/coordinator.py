@@ -36,6 +36,9 @@ class HoymilesDataUpdateCoordinator(DataUpdateCoordinator[PlantData]):
     """Coordinate polling of a Hoymiles DTU and optional MQTT re-publishing."""
 
     config_entry: HoymilesConfigEntry
+    # Device registry id of the DTU, set during entry setup before the platforms
+    # load, so that microinverter devices can link to it with via_device_id.
+    dtu_device_id: str
 
     def __init__(
         self,
@@ -63,9 +66,6 @@ class HoymilesDataUpdateCoordinator(DataUpdateCoordinator[PlantData]):
         self._mqtt_publisher = mqtt_publisher
         self._mqtt_enabled = config_entry.data.get(CONF_MQTT_ENABLED, False)
         self._production_cache = ProductionCache()
-        # Device registry id of the DTU, set during entry setup so that
-        # microinverter devices can link to it with via_device_id.
-        self.dtu_device_id: str | None = None
 
     @property
     def client(self) -> HoymilesModbusTCP:
