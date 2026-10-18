@@ -7,6 +7,7 @@ from unittest.mock import patch
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.const import CONF_HOST, CONF_PORT
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import device_registry as dr
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.hoymiles_solarpv.const import (
@@ -59,6 +60,18 @@ async def test_setup_creates_entities(hass: HomeAssistant, sample_plant_data) ->
     port_voltage = hass.states.get("sensor.hoymiles_microinverter_112233445566_port_1_pv_voltage")
     assert port_voltage is not None
     assert float(port_voltage.state) == 245.0
+
+
+async def test_microinverter_device_links_to_dtu(hass: HomeAssistant, sample_plant_data) -> None:
+    """Microinverter devices are registered via the DTU device."""
+    await _setup(hass, sample_plant_data)
+    registry = dr.async_get(hass)
+    dtu = registry.async_get_device(identifiers={(DOMAIN, "aabbccddeeff")})
+    microinverter = registry.async_get_device(identifiers={(DOMAIN, "112233445566")})
+    assert dtu is not None
+    assert microinverter is not None
+    assert microinverter.via_device_id == dtu.id
+    assert dtu.name == "Hoymiles DTU aabbccddeeff"
 
 
 async def test_unload_entry(hass: HomeAssistant, sample_plant_data) -> None:

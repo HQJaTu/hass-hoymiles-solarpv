@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import device_registry as dr
 
 from .const import (
     CONF_MQTT_ENABLED,
@@ -18,6 +19,7 @@ from .const import (
     CONF_MQTT_USERNAME,
     DEFAULT_MQTT_PORT,
     DEFAULT_MQTT_TOPIC,
+    DOMAIN,
 )
 from .coordinator import HoymilesConfigEntry, HoymilesDataUpdateCoordinator
 from .mqtt import HoymilesMqttPublisher
@@ -39,6 +41,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: HoymilesConfigEntry) -> 
 
     coordinator = HoymilesDataUpdateCoordinator(hass, entry, mqtt_publisher)
     await coordinator.async_config_entry_first_refresh()
+
+    # Register the DTU up front so microinverters can reference it by device id.
+    # The DTU entities fill in the rest of its device info when they are added.
+    dtu_device = dr.async_get(hass).async_get_or_create(
+        config_entry_id=entry.entry_id,
+        identifiers={(DOMAIN, coordinator.data.dtu)},
+    )
+    coordinator.dtu_device_id = dtu_device.id
 
     entry.runtime_data = coordinator
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
