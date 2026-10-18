@@ -13,6 +13,20 @@ from .coordinator import HoymilesDataUpdateCoordinator
 from .hoymiles import MicroinverterData
 
 
+def _microinverter_device_info(
+    coordinator: HoymilesDataUpdateCoordinator, serial_number: str
+) -> DeviceInfo:
+    """Return the device info of a microinverter, linked to its DTU."""
+    return DeviceInfo(
+        identifiers={(DOMAIN, serial_number)},
+        name=f"Hoymiles Microinverter {serial_number}",
+        manufacturer=MANUFACTURER,
+        model="Microinverter",
+        serial_number=serial_number,
+        via_device_id=coordinator.dtu_device_id,
+    )
+
+
 class HoymilesDtuEntity(CoordinatorEntity[HoymilesDataUpdateCoordinator]):
     """Base class for entities that represent the DTU (whole plant)."""
 
@@ -52,16 +66,8 @@ class HoymilesMicroinverterEntity(CoordinatorEntity[HoymilesDataUpdateCoordinato
         super().__init__(coordinator)
         self.entity_description = description
         self._serial_number = serial_number
-        dtu_serial = coordinator.data.dtu
         self._attr_unique_id = f"{serial_number}_{description.key}"
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, serial_number)},
-            name=f"Hoymiles Microinverter {serial_number}",
-            manufacturer=MANUFACTURER,
-            model="Microinverter",
-            serial_number=serial_number,
-            via_device=(DOMAIN, dtu_serial),
-        )
+        self._attr_device_info = _microinverter_device_info(coordinator, serial_number)
 
     @property
     def microinverter(self) -> MicroinverterData | None:
@@ -99,17 +105,9 @@ class HoymilesPortEntity(CoordinatorEntity[HoymilesDataUpdateCoordinator]):
         self.entity_description = description
         self._serial_number = serial_number
         self._port_number = port_number
-        dtu_serial = coordinator.data.dtu
         self._attr_unique_id = f"{serial_number}_{port_number}_{description.key}"
         self._attr_translation_placeholders = {"port": str(port_number)}
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, serial_number)},
-            name=f"Hoymiles Microinverter {serial_number}",
-            manufacturer=MANUFACTURER,
-            model="Microinverter",
-            serial_number=serial_number,
-            via_device=(DOMAIN, dtu_serial),
-        )
+        self._attr_device_info = _microinverter_device_info(coordinator, serial_number)
 
     @property
     def port(self) -> MicroinverterData | None:

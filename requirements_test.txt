@@ -7,9 +7,9 @@
 #     --python-version 3.14.2 -o requirements_test.lock
 #
 # pytest-homeassistant-custom-component pins the matching Home Assistant
-# release (0.13.337 -> homeassistant 2026.6.1, which requires Python >= 3.14.2).
-homeassistant==2026.6.1
-pytest-homeassistant-custom-component==0.13.337
+# release (0.13.357 -> homeassistant 2026.8.3, which requires Python >= 3.14.2).
+homeassistant==2026.8.3
+pytest-homeassistant-custom-component==0.13.357
 pymodbus>=3.5.0
 paho-mqtt>=2.0.0
 # Used by scripts/debug_dtu.py for CLI + TOML config-file parsing.
